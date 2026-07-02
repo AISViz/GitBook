@@ -1,3 +1,10 @@
+---
+icon: bezier-curve
+description: >-
+  Generate estimated vessel positions between AIS reports using linear,
+  geodesic, cubic spline, and custom interpolation methods.
+---
+
 # 🖇️ Track Interpolation
 
 Track interpolation with **AISdb** involves <mark style="background-color:yellow;">generating estimated positions of vessels at specific intervals when actual AIS data points are unavailable.</mark> This process is important for filling in gaps in the vessel's trajectory, which can occur due to signal loss, data filtering, or other disruptions.
@@ -6,7 +13,7 @@ In this tutorial, we introduce different types of track interpolation implemente
 
 ## Example data preparation
 
-First, we defined functions to transform and visualize the track data (a generator object), with options to view the data points or the tracks:
+First, we define functions to transform and visualize the track data (a generator object), with options to view the data points or the tracks:
 
 {% code lineNumbers="true" %}
 ```python
@@ -113,13 +120,13 @@ with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
 
 <figure><img src="../.gitbook/assets/Screenshot from 2024-08-13 11-14-18.png" alt="" width="460"><figcaption><p>Original data points of the vessel track queried from database</p></figcaption></figure>
 
-## Linear interpolation <a href="#with-an-equal-time-window" id="with-an-equal-time-window"></a>
+## Linear interpolation <a href="#linear-interpolation" id="linear-interpolation"></a>
 
 Linear interpolation estimates the vessel's position by drawing a straight line between two known points and calculating the positions at intermediate times. It is simple, fast, and straightforward but may not accurately represent complex movements.
 
 ### With equal time window intervals <a href="#with-an-equal-time-window" id="with-an-equal-time-window"></a>
 
-This method estimates the position of a vessel at regular time intervals (e.g., every 10 minutes).  To perform linear interpolation with an equal time window on the track defined above:
+This method estimates the position of a vessel at regular time intervals (e.g., every 10 minutes). To perform linear interpolation with an equal time window on the track defined above:
 
 {% code lineNumbers="true" %}
 ```python
@@ -142,7 +149,7 @@ with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
 
 ### With equal distance intervals <a href="#with-an-equal-space" id="with-an-equal-space"></a>
 
-This method estimates the position of a vessel at regular spatial intervals (e.g., every 1 km along its path). To perform linear interpolation with equal distance intervals on the pseudo track defined above:
+This method estimates the position of a vessel at regular spatial intervals (e.g., every 1 km along its path). To perform linear interpolation with equal distance intervals on the track defined above:
 
 {% code lineNumbers="true" %}
 ```python
@@ -166,7 +173,7 @@ with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
 
 ### Geodesic Track Interpolation <a href="#geometric-track-interpolation" id="geometric-track-interpolation"></a>
 
-This method estimates the positions of a vessel along a curved path using the principles of geometry, particularly involving great-circle routes.&#x20;
+This method estimates the positions of a vessel along a curved path using the principles of geometry, in particular great-circle routes.&#x20;
 
 {% code lineNumbers="true" %}
 ```python
@@ -211,14 +218,16 @@ with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
 
 <figure><img src="../.gitbook/assets/image (11).png" alt="" width="460"><figcaption><p>Cubic spline interpolation with equal time intervals</p></figcaption></figure>
 
-## Custom Track Interpolation  <a href="#custom-track-interpolation-barycentric-interpolation" id="custom-track-interpolation-barycentric-interpolation"></a>
+## Custom Track Interpolation <a href="#custom-track-interpolation-barycentric-interpolation" id="custom-track-interpolation-barycentric-interpolation"></a>
 
 In addition to the standard interpolation methods provided by **AISdb**, users can implement other interpolation techniques tailored to their specific analytical needs. For instance, B-spline (Basis Spline) interpolation is a mathematical technique that creates a smooth curve through data points. This smoothness is important in trajectory analysis as it avoids sharp, unrealistic turns and maintains a natural flow.
 
-Here is an implementation and example of using B-splines interpolation:
+Here is an implementation and example of using B-spline interpolation:
 
-{% code lineNumbers="true" %}
+{% code title="custom_interpolation.py" lineNumbers="true" %}
 ```python
+import warnings
+
 import numpy as np
 from scipy.interpolate import splrep, splev
 
@@ -280,7 +289,7 @@ def interp_bspline(tracks, step=1000):
 ```
 {% endcode %}
 
-Then, we can apply the function just implemented on the vessel tracks generator:
+Then, we can apply the function we just implemented to the vessel track generator:
 
 {% code lineNumbers="true" %}
 ```python
@@ -300,7 +309,16 @@ with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
 ```
 {% endcode %}
 
-The visualization of the interpolation shows as:
+The visualization of the interpolation is shown below.
 
-<figure><img src="../.gitbook/assets/image (6).png" alt=""><figcaption><p>B-spline interpolation with equal distance intervals of 1 km</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/image (6).png" alt=""><figcaption><p>B-spline interpolation with equal time intervals of 1,000 seconds</p></figcaption></figure>
 
+## Choosing a method
+
+Linear interpolation is the right default when speed matters more than geometric precision; it is cheap to compute and good enough for short gaps. For long ocean legs where a straight line would cut across the curvature of the Earth, geodesic interpolation follows the great-circle route instead. Cubic spline interpolation is worth reaching for when the downstream analysis is sensitive to smoothness, such as estimating heading or turn rate, since it avoids the sharp kinks a linear fit produces at each waypoint.
+
+Whichever method is chosen, interpolation invents positions between what the receiver actually reported. Feeding it a noisy or duplicated track will smooth over errors rather than correct them, so denoise the track first.
+
+## Where to go next
+
+See [Data Cleaning](data-cleaning.md) for removing bad pings and duplicate reports before interpolating a track.

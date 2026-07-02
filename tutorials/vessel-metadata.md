@@ -1,150 +1,89 @@
+---
+description: >-
+  Attach vessel particulars, name, IMO, ship type, flag, and tonnage, to
+  decoded tracks from a local metadata database or an official API.
+icon: ship
+---
+
 # ⬇️ Vessel Metadata
 
-This tutorial demonstrates how to access vessel metadata using MMSI and SQLite databases. In many cases, AIS messages do not contain metadata. Therefore, <mark style="background-color:yellow;">this tutorial introduces the built-in functions in AISdb and external APIs to extract detailed vessel information</mark> associated with a specific MMSI from web sources.
+AIS position reports carry an MMSI, but static fields such as vessel name, IMO number, ship type, flag, and tonnage are broadcast far less often and are frequently missing from decoded data. This tutorial covers how AISdb attaches vessel metadata from a local metadata database to query results, and where that metadata can come from today.
 
-## Metadata Download
+{% hint style="warning" %}
+Earlier AISdb releases shipped web scrapers for VesselFinder and MarineTraffic. Both sites now block automated access and have moved vessel particulars behind paid subscriptions, so the scraping layer no longer works and has been removed from the package. Metadata lookups against a local database still work exactly as before; to acquire new metadata, use an official API such as the MarineTraffic one shown below.
+{% endhint %}
 
-We introduced two methods implemented in **AISdb** for scraping metadata: using <mark style="background-color:yellow;">session requests</mark> for direct access and employing <mark style="background-color:yellow;">web drivers with browsers</mark> to handle modern websites with dynamic content. Additionally, we provided an example of utilizing a <mark style="background-color:yellow;">third-party API</mark> to access vessel information.
+## Metadata storage
 
-### Session Request
+AISdb caches vessel metadata in a standalone SQLite database, separate from your AIS track database, so it can be joined back onto tracks from any query. `aisdb.webdata.marinetraffic.VesselInfo` opens (or creates) that database and exposes it through its `.trafficDB` attribute. The table layout is one row per MMSI with name, callsign, flag, gross tonnage, summer deadweight, length and breadth, year built, and home port.
 
-The session request method in Python is a straightforward and efficient approach for retrieving metadata from websites. In AISdb, the `aisdb.webdata._scraper.search_metadata_vesselfinder` function leverages this method to scrape detailed information about vessels based on their MMSI numbers. This function efficiently gathers a range of data, including vessel name, type, flag, tonnage, and navigation status.&#x20;
+If you have a metadata database built with an earlier AISdb release, it remains fully usable. Databases populated from an external source (for example, an API subscription) work as well, as long as they follow the same `webdata_marinetraffic` table schema.
 
-This is an example of how to use the `search_metadata_vesselfinder` feature in AISdb to scrape data from [VesselFinder](https://www.vesselfinder.com/) website:
+## Attaching metadata to tracks
 
-{% code lineNumbers="true" %}
+To read cached metadata and attach it to tracks generated from `TrackGen`, use `aisdb.webdata.marinetraffic.vessel_info`. It takes the track generator and the raw SQLite connection to the traffic database, and merges each track dictionary with the cached row for its MMSI, or a null-filled record if no metadata was found:
+
+{% code title="attach_metadata.py" lineNumbers="true" %}
 ```python
-from aisdb.webdata._scraper import search_metadata_vesselfinder
+import aisdb
+from datetime import datetime
+from aisdb.webdata.marinetraffic import vessel_info, VesselInfo
 
-MMSI = 228386800
-dict_ = search_metadata_vesselfinder(MMSI)
+dbpath = './test_database.db'
+start_time = datetime(2021, 7, 1)
+end_time = datetime(2021, 7, 2)
 
-print(dict_)
+with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
+    qry = aisdb.DBQuery(
+        dbconn=dbconn,
+        callback=aisdb.database.sqlfcn_callbacks.in_timerange_validmmsi,
+        start=start_time,
+        end=end_time,
+    )
+    rowgen = qry.gen_qry()
+    tracks = aisdb.track_gen.TrackGen(rowgen, decimate=False)
+
+    vinfoDB = VesselInfo('./testdata/traffic_info.db').trafficDB
+    with vinfoDB as trafficDB:
+        for track in vessel_info(tracks, trafficDB):
+            print(track['mmsi'], track['marinetraffic_info'])
 ```
 {% endcode %}
 
-{% code lineNumbers="true" %}
-```
-{'IMO number': '9839131',
- 'Vessel Name': 'CMA CGM CHAMPS ELYSEES',
- 'Ship type': 'Container Ship',
- 'Flag': 'France',
- 'Homeport': '-',
- 'Gross Tonnage': '236583',
- 'Summer Deadweight (t)': '220766',
- 'Length Overall (m)': '400',
- 'Beam (m)': '61',
- 'Draught (m)': '',
- 'Year of Build': '2020',
- 'Builder': '',
- 'Place of Build': '',
- 'Yard': '',
- 'TEU': '',
- 'Crude Oil (bbl)': '-',
- 'Gas (m3)': '-',
- 'Grain': '-',
- 'Bale': '-',
- 'Classification Society': '',
- 'Registered Owner': '',
- 'Owner Address': '',
- 'Owner Website': '-',
- 'Owner Email': '-',
- 'Manager': '',
- 'Manager Address': '',
- 'Manager Website': '',
- 'Manager Email': '',
- 'Predicted ETA': '',
- 'Distance / Time': '',
- 'Course / Speed': '\xa0',
- 'Current draught': '16.0 m',
- 'Navigation Status': '\nUnder way\n',
- 'Position received': '\n22 mins ago \n\n\n',
- 'IMO / MMSI': '9839131 / 228386800',
- 'Callsign': 'FLZF',
- 'Length / Beam': '399 / 61 m'}
-```
-{% endcode %}
+Each track dictionary gains a `marinetraffic_info` key holding the cached row (or the null placeholder if that MMSI was never resolved), and `'marinetraffic_info'` is added to the track's `static` field set so downstream code knows to treat it as vessel-level rather than per-position data.
 
-### MarineTraffic API
+## Acquiring metadata (official API)
 
-In addition to metadata scraping, we may also use the available API the data provides. MarineTraffic offers an option to subscribe to its API to access vessel data, forecast voyages, position the vessels, etc. Here is an example of retrieving :
+MarineTraffic sells a supported REST API with paid subscription tiers. It is not part of AISdb, but it is the supported way to obtain vessel particulars in bulk now that scraping is off the table. The snippet below is illustrative; the exact service name, response fields, and pricing tier depend on your MarineTraffic subscription, so check MarineTraffic's own API documentation for the endpoint and parameters your account has access to.
 
-{% code lineNumbers="true" %}
+{% code title="marinetraffic_api.py" lineNumbers="true" %}
 ```python
 import requests
 
-# Your MarineTraffic API key
+# Your MarineTraffic API key (from a paid subscription)
 api_key = 'your_marine_traffic_api_key'
 
-# List of MMSI numbers you want to query
-mmsi = [228386800,
-        372351000,
-        373416000,
-        477003800,
-        477282400
-]
+# MMSI numbers to query
+mmsi_list = [228386800, 366773000]
 
-# Base URL for the MarineTraffic API endpoint
+# Illustrative endpoint, confirm the exact path and parameters
+# against your MarineTraffic subscription's API documentation
 url = f'https://services.marinetraffic.com/api/exportvessels/{api_key}'
-
-# Prepare the API request
 params = {
-    'shipid': ','.join(mmsi_list),  # Join MMSI list with commas
-    'protocol': 'jsono',            # Specify the response format
-    'msgtype': 'extended'           # Specify the level of details
+    'shipid': ','.join(str(m) for m in mmsi_list),
+    'protocol': 'jsono',
+    'msgtype': 'extended',
 }
 
-# Make the API request
 response = requests.get(url, params=params)
+response.raise_for_status()
 
-# Check if the request was successful
-if response.status_code == 200:
-    vessel_data = response.json()
-    
-    for vessel in vessel_data:
-        print(f"Vessel Name: {vessel.get('NAME')}")
-        print(f"MMSI: {vessel.get('MMSI')}")
-        print(f"IMO: {vessel.get('IMO')}")
-        print(f"Call Sign: {vessel.get('CALLSIGN')}")
-        print(f"Type: {vessel.get('TYPE_NAME')}")
-        print(f"Flag: {vessel.get('COUNTRY')}")
-        print(f"Length: {vessel.get('LENGTH')}")
-        print(f"Breadth: {vessel.get('BREADTH')}")
-        print(f"Year Built: {vessel.get('YEAR_BUILT')}")
-        print(f"Status: {vessel.get('STATUS_NAME')}")
-        print('-' * 40)
-else:
-    print(f"Failed to retrieve data: {response.status_code}")
+for vessel in response.json():
+    print(f"Vessel Name: {vessel.get('NAME')}")
+    print(f"MMSI: {vessel.get('MMSI')}")
+    print(f"IMO: {vessel.get('IMO')}")
+    print(f"Flag: {vessel.get('COUNTRY')}")
 ```
 {% endcode %}
 
-## Metadata Storage
-
-If you already have a database containing AIS track data, then vessel metadata can be downloaded and stored in a separate database.
-
-{% code lineNumbers="true" %}
-```python
-from aisdb import track_gen, decode_msgs, DBQuery, sqlfcn_callbacks, Domain
-from datetime import datetime 
-
-dbpath = "/home/database.db"
-start = datetime(2021, 11, 1)
-end = datetime(2021, 11, 2)
-
-with DBConn(dbpath="/home/data_sample_dynamic.csv.db") as dbconn:
-        qry = aisdb.DBQuery(
-             dbconn=dbconn, callback=in_timerange,
-             start=datetime(2020, 1, 1, hour=0),
-             end=datetime(2020, 12, 3, hour=2)
-        )
-        # A new database will be created if it does not exist to save the downloaded info from MarineTraffic
-        traffic_database_path = "/home/traffic_info.db"
-       
-        # User can select a custom boundary for a query using aisdb.Domain
-        qry.check_marinetraffic(trafficDBpath=, boundary={"xmin":-180, "xmax":180, "ymin":-180,  "ymax":180})
-        
-        rowgen = qry.gen_qry(verbose=True)
-        trackgen = track_gen.TrackGen(rowgen, decimate=True)
-```
-{% endcode %}
-
+Rows fetched this way can be inserted into the `VesselInfo` database so `vessel_info` picks them up on the next join, giving you the same track-merging workflow with a supported data source behind it.

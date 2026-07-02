@@ -1,5 +1,6 @@
 ---
 description: How to deploy your own Automatic Identification System (AIS) receiver.
+icon: satellite-dish
 cover: ../.gitbook/assets/IMG_3297.jpg
 coverY: 0
 layout:
@@ -27,7 +28,7 @@ layout:
 
 # 📡 AIS Hardware
 
-In addition to utilizing [AIS data provided by Spire](https://spire.com/maritime/?utm_term=spire%20ais%20data\&utm_campaign=Maritime+-+Search+-+Exact\&utm_source=adwords\&utm_medium=ppc\&hsa_acc=4934961383\&hsa_cam=20888450362\&hsa_grp=155753134974\&hsa_ad=685453945378\&hsa_src=g\&hsa_tgt=kwd-922295538895\&hsa_kw=spire%20ais%20data\&hsa_mt=e\&hsa_net=adwords\&hsa_ver=3\&gad_source=1\&gclid=CjwKCAjw74e1BhBnEiwAbqOAjHJkT1RTcEZGEybUWVkwfv9MYvm6ZO-6JOT7diQdXleleG9dHmal1BoCKzcQAvD_BwE) for the Canadian coasts, you can install AIS receiver hardware to capture AIS data directly. The received data can be processed and stored in databases, which can then be used with AISdb. This approach offers additional data sources and allows users to collect and process their data (as illustrated in the pipeline below). Doing so allows you to customize your data collection efforts to meet specific needs and seamlessly integrate the data with AISdb for enhanced analysis and application. At the same time, you can share the data you collect with others.
+In addition to utilizing [AIS data provided by Spire](https://spire.com/maritime/?utm_term=spire%20ais%20data\&utm_campaign=Maritime+-+Search+-+Exact\&utm_source=adwords\&utm_medium=ppc\&hsa_acc=4934961383\&hsa_cam=20888450362\&hsa_grp=155753134974\&hsa_ad=685453945378\&hsa_src=g\&hsa_tgt=kwd-922295538895\&hsa_kw=spire%20ais%20data\&hsa_mt=e\&hsa_net=adwords\&hsa_ver=3\&gad_source=1\&gclid=CjwKCAjw74e1BhBnEiwAbqOAjHJkT1RTcEZGEybUWVkwfv9MYvm6ZO-6JOT7diQdXleleG9dHmal1BoCKzcQAvD_BwE) for the Canadian coasts, you can install AIS receiver hardware to capture AIS data directly. The received data can be processed and stored in databases, which can then be used with AISdb. This approach offers additional data sources and allows you to collect and process your own data (as illustrated in the pipeline below). Doing so lets you customize your data collection efforts to meet specific needs and seamlessly integrate the data with AISdb for enhanced analysis and application. At the same time, you can share the data you collect with others.
 
 
 
@@ -35,21 +36,21 @@ In addition to utilizing [AIS data provided by Spire](https://spire.com/maritime
 
 ## Requirements
 
-* <mark style="background-color:yellow;">Raspberry Pi or other computers</mark> with internet working capability
+* <mark style="background-color:yellow;">Raspberry Pi or other computers</mark> with internet connectivity
 
 <div align="center" data-full-width="true"><figure><img src="../.gitbook/assets/image (27).png" alt="" width="300"><figcaption><p>Raspberry Pi (Image source: <a href="https://www.raspberrypi.com/products/raspberry-pi-3-model-b/">https://www.raspberrypi.com/products/raspberry-pi-3-model-b/</a>)</p></figcaption></figure></div>
 
 * <mark style="background-color:yellow;">162MHz receiver</mark>, such as the [Wegmatt dAISy 2 Channel Receiver](https://shop.wegmatt.com/collections/frontpage/products/daisy-2-dual-channel-ais-receiver-with-nmea-0183?variant=7103563628580)
-* <mark style="background-color:yellow;">An antenna in the VHF frequency band (30MHz - 300MHz)</mark> _e.g._ Shakespeare QC-4 VHF Antenna
+* <mark style="background-color:yellow;">An antenna in the VHF frequency band (30MHz - 300MHz)</mark>, _e.g._, Shakespeare QC-4 VHF Antenna
 * Optionally, you may want
   * Antenna mount
   * A filtered preamp, such as [this one sold by Uputronics](https://store.uputronics.com/index.php?route=product/product\&path=59\&product_id=93), to improve signal range and quality
 
-An additional option includes <mark style="background-color:yellow;">**free AIS receivers**</mark> <mark style="background-color:yellow;"></mark><mark style="background-color:yellow;">from</mark> [<mark style="background-color:yellow;">MarrineTraffic</mark>](https://www.marinetraffic.com/en/p/apply-for-free-ais-receiver)<mark style="background-color:yellow;">.</mark> This option may require you to share the data with the organization to help expand its AIS-receiving network.
+Another option is <mark style="background-color:yellow;">**free AIS receivers**</mark> <mark style="background-color:yellow;">from</mark> [<mark style="background-color:yellow;">MarineTraffic</mark>](https://www.marinetraffic.com/en/p/apply-for-free-ais-receiver)<mark style="background-color:yellow;">.</mark> This option may require you to share the data with the organization to help expand its AIS-receiving network.
 
 ## Hardware Setup
 
-* When setting up your antenna, place it as high as possible and far away from obstructions and other equipment as is practical.
+* When setting up your antenna, place it as high as possible and as far away from obstructions and other equipment as is practical.
 * Connect the antenna to the receiver. If using a preamp filter, connect it between the antenna and the receiver.
 * Connect the receiver to your Linux device via a USB cable. If using a preamp filter, power it with a USB cable.
 *   Validate the hardware configuration
@@ -68,41 +69,62 @@ An additional option includes <mark style="background-color:yellow;">**free AIS 
     !AIVDM,1,1,,A,B4eHWD009>oAeDVHIfm87wh7kP06,0*20
     </code></pre>
 
-A visual example of the antenna hardware setup that MERIDIAN has available is as follows:
+Below is the antenna hardware setup MERIDIAN uses.
 
 <figure><img src="../.gitbook/assets/image (21).png" alt="" width="563"><figcaption><p>MERIDIAN AIS hardware setup working at Sandy Cove in Halifax, NS - Canada.</p></figcaption></figure>
 
 ## Software Setup
 
-### Quick Start
+AISdb's receiver is a Rust component exposed to Python as `aisdb.start_receiver()`. It listens for AIS traffic on a UDP or TCP socket, parses the NMEA sentences, and writes the decoded positions and static reports straight into an SQLite or PostgreSQL database. It does not read a serial port directly, so a USB receiver such as the dAISy needs a small bridge program in front of it to forward the serial bytes onto a local network port. `mproxy-client`, the same crate the AISdb receiver links against internally, does that job.
 
-Connect the receiver to the Raspberry Pi via a USB port, and then run the `configure_rpi.sh` script. This will install the Rust toolchain, AISdb dispatcher, and AISdb system service (described below), allowing the receiver to start at boot.
+### Install AISdb
+
+On the Raspberry Pi (or whatever Linux box the receiver is plugged into), install Python 3.8 or newer and pull AISdb from PyPI.
 
 {% code lineNumbers="true" %}
 ```bash
-curl --proto '=https' --tlsv1.2 https://git-dev.cs.dal.ca/meridian/aisdb/-/raw/master/configure_rpi.sh | bash
+pip install aisdb
 ```
 {% endcode %}
 
-### Custom Install
+`pip install aisdb` ships prebuilt wheels for the common platforms, so a Rust toolchain is not required just to run the receiver. You only need Rust if you are building AISdb from source.
 
-1. **Install Raspberry Pi OS with SSH enabled:** Visit [https://www.raspberrypi.com/software/](https://www.raspberrypi.com/software/) to download and install the Raspberry Pi OS. If using the RPi imager, please ensure you run it as an administrator.
-2. **Connect the receiver:** Attach the receiver to the Raspberry Pi using a USB cable. Then log in to the Raspberry Pi and update the system with the following command: `sudo apt-get update`
-3. **Install the Rust toolchain**: Install the Rust toolchain on the Raspberry Pi using the following command:  `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`  Afterward, log out and log back in to add Rust and Cargo to the system path.
-4. **Install the network client and dispatcher:** (a) From [crates.io](https://crates.io/), using `cargo install mproxy-client`(b) To install from the source, use the local path instead, _e.g._ `cargo install --path ./dispatcher/client`
-5. **Install systemd services**: Set up new systemd services to run the AIS receiver and dispatcher. First, create a new text file `./ais_rcv.service` with contents in the block below, replace `User=ais` and `/home/ais` with the username and home directory chosen in step 1.
+### Bridge the serial port to a network socket
 
-{% code title="./ais_rcv.service" overflow="wrap" lineNumbers="true" %}
+{% stepper %}
+{% step %}
+#### Connect the receiver
+
+Attach the dAISy (or equivalent) to the Pi over USB, log in, and update the system with `sudo apt-get update`.
+{% endstep %}
+
+{% step %}
+#### Install the Rust toolchain
+
+Needed to build `mproxy-client`. Run `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`, then log out and back in so `cargo` is on the path.
+{% endstep %}
+
+{% step %}
+#### Install `mproxy-client`
+
+Install it from [crates.io](https://crates.io/crates/mproxy-client) by running `cargo install mproxy-client`.
+{% endstep %}
+
+{% step %}
+#### Create a systemd service
+
+Keeps the bridge running and restarts it if the receiver is unplugged and replugged. Create `./mproxy_client.service`, replacing `User=ais` and `/home/ais` with the username and home directory on your Pi.
+
+{% code title="mproxy_client.service" overflow="wrap" lineNumbers="true" %}
 ```
 [Unit]
-Description="AISDB Receiver"
+Description="AISdb serial-to-UDP bridge"
 After=network-online.target
-Documentation=https://aisdb.meridian.cs.dal.ca/doc/receiver.html
 
 [Service]
 Type=simple
-User=ais # Replace with your username
-ExecStart=/home/ais/.cargo/bin/mproxy-client --path /dev/ttyACM0 --server-addr 'aisdb.meridian.cs.dal.ca:9921' # Replace home directory
+User=ais
+ExecStart=/home/ais/.cargo/bin/mproxy-client --path /dev/ttyACM0 --server-addr '127.0.0.1:9921'
 Restart=always
 RestartSec=30
 
@@ -111,36 +133,60 @@ WantedBy=default.target
 ```
 {% endcode %}
 
-This service will broadcast receiver input downstream to _<mark style="background-color:yellow;">**aisdb.meridian.cs.dal.ca**</mark>_ via UDP. You can add additional endpoints at this stage; for more information, see `mproxy-client --help.` Additional AIS networking tools, such as `mproxy-forward`, `mproxy-server`, and `mproxy-reverse`, are available in the `./dispatcher` source directory.
+This forwards whatever the dAISy writes to `/dev/ttyACM0` onto UDP port 9921 on the same machine, where the AISdb receiver will be listening. Run `mproxy-client --help` for the full set of forwarding options if you want to relay to a different host instead.
+{% endstep %}
 
-Next, link and enable the service on the Raspberry Pi to ensure the receiver starts at boot:
+{% step %}
+#### Link and enable the service
+
+Starts the bridge at boot.
 
 {% code lineNumbers="true" %}
 ```bash
 sudo systemctl enable systemd-networkd-wait-online.service
-sudo systemctl link ./ais_rcv.service
+sudo systemctl link ./mproxy_client.service
 sudo systemctl daemon-reload
-sudo systemctl enable ais_rcv
-sudo systemctl start ais_rcv
+sudo systemctl enable mproxy_client
+sudo systemctl start mproxy_client
+```
+{% endcode %}
+{% endstep %}
+{% endstepper %}
+
+### Run the AISdb receiver
+
+With the bridge forwarding raw NMEA onto `127.0.0.1:9921`, point `aisdb.start_receiver()` at that port. Save this as `./run_receiver.py`.
+
+{% code title="./run_receiver.py" lineNumbers="true" %}
+```python
+import aisdb
+
+aisdb.start_receiver(
+    udp_listen_addr="127.0.0.1:9921",
+    sqlite_dbpath="/home/ais/ais_rx.db",
+    connect_addr=None,
+)
 ```
 {% endcode %}
 
-See more examples in `docker-compose.yml`
+`sqlite_dbpath` can be swapped for `postgres_connection_string` if you would rather write straight into PostgreSQL. `connect_addr` defaults to `aisviz.cs.dal.ca:9920`, MERIDIAN's public aggregator. Leaving it at the default also merges MERIDIAN's live feed into your own stream, which is convenient if you want a fuller picture of traffic than your antenna alone can see, but set it to `None` (as above) if you only want the messages your own receiver decodes.
+
+Wrap the script in its own systemd service the same way as the bridge, pointing `ExecStart` at your Python interpreter and `run_receiver.py`, and enable it so both services come up together on boot.
 
 ## 💡 Common Issues
 
-For some Raspberry hardware (such as the author's Raspberry Pi 4 Model B Rev 1.5), when connecting dAISy AIS Receivers, the device file in Linux used to represent a serial communication interface is not always "/dev/ttyACM0", as used in our `./ais_rcv.service`.
+For some Raspberry Pi hardware (the Raspberry Pi 4 Model B is a common example), the device file Linux assigns to the receiver is not always `/dev/ttyACM0` as used in the systemd unit above.
 
-You can check the actual device file in use by running:
+Check which device file is actually in use.
 
-```
+```bash
 ls -l /dev
 ```
 
-For example, the author found that `serial0` was linked to `ttyS0` (i.e., `ttyS0`).
+On some boards `serial0` is linked to `ttyS0` rather than a `ttyACM*` device.
 
-Simply changing `/dev/ttyACM0` to `/dev/ttyS0` may result in receiving garbled AIS signals. This is because the default baud rate settings are different. You can modify the default baud rate for `ttyS0` using the following command:
+Simply changing `/dev/ttyACM0` to `/dev/ttyS0` in the service file may produce garbled AIS sentences, because the default baud rate on that port does not match what the receiver expects. Set the baud rate explicitly.
 
-```
+```bash
 stty -F /dev/ttyS0 38400 cs8 -cstopb -parenb
 ```

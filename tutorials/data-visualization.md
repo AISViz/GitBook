@@ -1,10 +1,17 @@
+---
+description: >-
+  Visualize AISdb vessel tracks with the built-in web interface or with
+  Contextily, Basemap, Cartopy, Plotly, and Kepler.gl.
+icon: map
+---
+
 # 🗺️ Data Visualization
 
-This tutorial introduces visualization options for vessel trajectories processed using **AISdb**, including <mark style="background-color:yellow;">AISdb's integrated web interface</mark> and <mark style="background-color:yellow;">alternative approaches with popular Python visualization packages</mark>. Practical examples were provided for each tool, illustrating how to process and visualize AISdb tracks effectively.
+This tutorial covers the visualization options available for vessel trajectories processed with **AISdb**, including <mark style="background-color:yellow;">AISdb's integrated web interface</mark> and <mark style="background-color:yellow;">alternative approaches built on popular Python visualization packages</mark>. Each tool comes with a working example, so you can see exactly how to turn queried AISdb tracks into a map.
 
 ## Internal visualization
 
-**AISdb** provides an integrated data visualization feature through the [`aisdb.web_interface.visualize`](https://aisdb.meridian.cs.dal.ca/doc/api/aisdb.web_interface.html#aisdb.web_interface.visualize) module, which allows users to generate interactive maps displaying vessel tracks. This built-in tool is designed for simplicity and ease of use, offering customizable visualizations directly from AIS data without requiring extensive setup.&#x20;
+**AISdb** provides an integrated data visualization feature through the [`aisdb.web_interface.visualize`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.web_interface.html#aisdb.web_interface.visualize) module, which allows users to generate interactive maps displaying vessel tracks. This built-in tool is designed for simplicity and ease of use, offering customizable visualizations directly from AIS data without requiring extensive setup.&#x20;
 
 Here is an example of using the web interface module to show queried data with colors. To display vessel tracks in a single color:
 
@@ -100,16 +107,18 @@ with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
 
 ## Alternative visualization
 
-Several alternative Python packages can be leveraged for users seeking more advanced or specialized visualization capabilities. For instance, Contextily, `Basemap` and `Cartopy` are excellent for creating detailed 2D plots, while `Plotly` offering powerful interactive graphs. Additionally, `Kepler.gl` caters to users needing dynamic, large-scale visualizations or 3D mapping. These alternatives allow for a deeper exploration of AIS data, offering flexibility in how data is presented and analyzed beyond the default capabilities of AISdb.
+If you need more advanced or specialized visualization, several Python packages pair well with AISdb tracks. Contextily, `Basemap`, and `Cartopy` are solid choices for detailed 2D plots, while `Plotly` gives you interactive, web-based graphs. `Kepler.gl` is the better fit for large-scale or 3D visualizations. Each package handles the same track data differently, so pick whichever fits how you want to present and explore your AIS data.
 
 ### Contextily + Matplotlib
 
-<pre class="language-python" data-line-numbers><code class="lang-python">import aisdb
+{% code title="contextily.py" lineNumbers="true" %}
+```python
+import aisdb
 from datetime import datetime
 from aisdb.database.dbconn import SQLiteDBConn
 from aisdb import DBConn, DBQuery, DomainFromPoints
-<strong>import contextily as cx
-</strong>import matplotlib.pyplot as plt
+import contextily as cx
+import matplotlib.pyplot as plt
 import random 
 import nest_asyncio
 nest_asyncio.apply()
@@ -161,15 +170,16 @@ with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
     colored_tracks = list(color_tracks2(tracks))
     
     plot_tracks_with_contextily(colored_tracks)
-</code></pre>
+```
+{% endcode %}
 
 <figure><img src="../.gitbook/assets/contextily.png" alt="" width="563"><figcaption><p>Visualization of vessel tracks with Contextily</p></figcaption></figure>
 
 ### :warning: Basemap + Matplotlib
 
-> Note: mpl\_toolkits.basemap uses numpy v1, therefore, downgrade numpy to v1.26.4 to use Basemap. Else, refer to other alternatives mentioned such as Contextily!
+> Note: mpl\_toolkits.basemap uses numpy v1, so downgrade numpy to v1.26.4 to use Basemap, or turn to one of the other alternatives mentioned here, such as Contextily.
 
-{% code lineNumbers="true" %}
+{% code title="basemap.py" lineNumbers="true" %}
 ```python
 from mpl_toolkits.basemap import Basemap
 import matplotlib.pyplot as plt
@@ -219,7 +229,7 @@ with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
 
 ### Cartopy
 
-{% code lineNumbers="true" %}
+{% code title="cartopy.py" lineNumbers="true" %}
 ```python
 import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
@@ -256,7 +266,7 @@ with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
 
 ### Plotly
 
-{% code lineNumbers="true" %}
+{% code title="plotly.py" lineNumbers="true" %}
 ```python
 import plotly.graph_objects as go
 import plotly.express as px
@@ -365,7 +375,7 @@ with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
 
 ### Kepler.gl
 
-{% code lineNumbers="true" %}
+{% code title="kepler.py" lineNumbers="true" %}
 ```python
 import pandas as pd
 from keplergl import KeplerGl
@@ -395,4 +405,10 @@ with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
 <figure><img src="../.gitbook/assets/image (35).png" alt=""><figcaption><p>Interactive visualization of vessel track positions with Kepler.gl</p></figcaption></figure>
 
 <figure><img src="../.gitbook/assets/image (36).png" alt=""><figcaption><p>Heat map of vessel track density with Kepler.gl</p></figcaption></figure>
+
+## Where to go next
+
+Which tool to reach for depends on what you're checking. `web_interface.visualize` is the fastest way to eyeball a query while you're still iterating on it, since it needs no extra dependencies beyond AISdb itself. Matplotlib with Contextily or Cartopy is the right choice once you need a static figure for a report or paper, where projection control and print quality matter more than interactivity. Kepler.gl is built for the opposite case, large track sets that need to be filtered, layered, and explored interactively rather than viewed once and discarded.
+
+Once tracks are visualized, [tutorials/track-interpolation.md](track-interpolation.md) covers filling gaps between AIS position reports so the tracks you plot are continuous rather than jumping between sparse pings.
 

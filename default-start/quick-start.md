@@ -1,5 +1,6 @@
 ---
 description: A hands-on quick start guide for using AISdb.
+icon: rocket
 cover: >-
   https://images.unsplash.com/photo-1505896121-d0448a07f27c?crop=entropy&cs=srgb&fm=jpg&ixid=M3wxOTcwMjR8MHwxfHNlYXJjaHw1fHxOb3ZhJTIwU2NvdGlhfGVufDB8fHx8MTcyMzMxMTE3Mnww&ixlib=rb-4.0.3&q=85
 coverY: 0
@@ -7,36 +8,52 @@ coverY: 0
 
 # 🛰️ Quick Start
 
-### If you are new to AIS topics, [click-here](https://aisviz.gitbook.io/documentation/tutorials/ais-automatic-identification-system) to know about "Automatic Identification System (AIS)".&#x20;
+### If you are new to AIS topics, [click here](../tutorials/automatic-identification-system.md) to learn about the Automatic Identification System (AIS).
 
-**Note:** _If you are starting from scratch, download the data ".db" file in our_  [_AISdb Tutorial GitHub_](https://github.com/AISViz/Tutorials) _repository so that you can follow this guide properly._
+_If you are starting from scratch, download the example ".db" file from our_ [_AISdb Tutorial GitHub_](https://github.com/AISViz/Tutorials) _repository so you can follow this guide with real data._
 
 ### Python Environment and Installation
 
-To work with the AISdb Python package, please ensure you have Python version 3.8 or higher. If you plan to use SQLite, no additional installation is required, as it is included with Python by default. However, those who prefer using a PostgreSQL server must install it separately and enable the TimescaleDB extension to function correctly.
+To work with the AISdb Python package, please ensure you have Python version 3.8 or higher. If you plan to use SQLite, no additional installation is required, as it is included with Python by default. Those who prefer using a PostgreSQL server must install it separately and can optionally enable the TimescaleDB extension for better performance on large time-series ingests.
 
 #### User Installation
 
 The AISdb Python package can be conveniently installed using pip. <mark style="background-color:yellow;">It's highly recommended that a virtual Python environment be created and the package installed within it.</mark>
 
-<pre class="language-bash" data-title="Linux" data-line-numbers><code class="lang-bash"><strong>python -m venv AISdb   # create a python virtual environment
-</strong>source ./AISdb/bin/activate  # activate the virtual environment
-<strong>pip install aisdb  # from https://pypi.org/project/aisdb/
-</strong></code></pre>
+{% tabs %}
+{% tab title="Linux" icon="linux" %}
+{% code title="install.sh" %}
+```bash
+python -m venv AISdb   # create a python virtual environment
+source ./AISdb/bin/activate  # activate the virtual environment
+pip install aisdb  # from https://pypi.org/project/aisdb/
+```
+{% endcode %}
+{% endtab %}
 
-<pre class="language-bash" data-title="Windows" data-line-numbers><code class="lang-bash"><strong>python -m venv AISdb
-</strong>./AISdb/Scripts/activate  
-<strong>pip install aisdb
-</strong></code></pre>
+{% tab title="Windows" icon="windows" %}
+{% code title="install.ps1" %}
+```bash
+python -m venv AISdb
+./AISdb/Scripts/activate
+pip install aisdb
+```
+{% endcode %}
+{% endtab %}
+{% endtabs %}
+
+{% hint style="info" %}
+PyPI carries the latest stable line of AISdb. The 1.8.0-alpha release that this documentation targets is published on [GitHub](https://github.com/AISViz/AISdb/releases/tag/1.8.0-alpha) and installs from source. If you need the features introduced in 1.8.0-alpha, such as weather integration, NOAA CSV ingestion, and TimescaleDB support, follow the [Compile AISdb](compile-aisdb.md) guide or run `pip install git+https://github.com/AISViz/AISdb.git` with a Rust toolchain installed. The core workflow shown in this guide works the same on both.
+{% endhint %}
 
 You can test your installation by running the following commands:
 
 <pre class="language-python" data-line-numbers><code class="lang-python"><strong>python
 </strong>>>> import aisdb
-<strong>>>> aisdb.__version__  # should return '1.7.3' or newer
+<strong>>>> aisdb.__version__  # '1.8.0-alpha' when built from source, or the latest PyPI release
 </strong></code></pre>
 
-Notice that if you are running [Jupyter](https://jupyter.org/), ensure it is installed in the same environment as AISdb:
+If you are running [Jupyter](https://jupyter.org/), ensure it is installed in the same environment as AISdb:
 
 <pre class="language-bash" data-line-numbers><code class="lang-bash"><strong>source ./AISdb/bin/activate
 </strong>pip install jupyter
@@ -47,12 +64,12 @@ The Python code in the rest of this document can be run in the Python environmen
 
 #### Development Installation
 
-For using _<mark style="background-color:red;">nightly builds</mark>_ <mark style="background-color:red;"></mark><mark style="background-color:red;">**(not mandatory)**</mark>, you can install it from the source:
+To use _<mark style="background-color:red;">nightly builds</mark>_ <mark style="background-color:red;">**(not mandatory)**</mark>, you can install AISdb from source:
 
 <pre class="language-bash" data-line-numbers><code class="lang-bash"><strong>source AISdb/bin/activate  # On Windows use `AISdb\Scripts\activate`
 </strong>
 <strong># Cloning the Repository and installing the package
-</strong>git clone https://github.com/AISViz/AISdb.git &#x26;&#x26; cd aisdb
+</strong>git clone https://github.com/AISViz/AISdb.git &#x26;&#x26; cd AISdb
 <strong>
 </strong># Windows users can instead download the installer:
 <strong>#   - https://forge.rust-lang.org/infra/other-installation-methods.html#rustup
@@ -67,8 +84,9 @@ For using _<mark style="background-color:red;">nightly builds</mark>_ <mark styl
 </strong>maturin develop --release --extras=test,docs
 </code></pre>
 
-Alternatively, you can use _<mark style="background-color:red;">nightly builds</mark>_ <mark style="background-color:red;"></mark><mark style="background-color:red;">**(not mandatory)**</mark> on **Google Colab** as follows:
+Alternatively, you can use _<mark style="background-color:red;">nightly builds</mark>_ <mark style="background-color:red;">**(not mandatory)**</mark> on **Google Colab** as follows:
 
+{% code title="colab_setup.py" %}
 <pre class="language-python" data-line-numbers><code class="lang-python"><strong>import os
 </strong># Clone the AISdb repository from GitHub
 <strong>!git clone https://github.com/AISViz/AISdb.git
@@ -89,38 +107,49 @@ Alternatively, you can use _<mark style="background-color:red;">nightly builds</
 </strong># Build and install the AISdb package using Maturin
 <strong>!maturin develop --release --extras=test,docs
 </strong></code></pre>
+{% endcode %}
 
 ### Database Handling
 
-AISdb supports SQLite and PostgreSQL databases. <mark style="background-color:red;">Since version</mark> <mark style="background-color:red;"></mark><mark style="background-color:red;">**1.7.3**</mark><mark style="background-color:red;">, AISdb requires</mark> [<mark style="background-color:red;">**TimescaleDB over PostgreSQL**</mark>](https://www.timescale.com/) <mark style="background-color:red;">to function properly.</mark> To install TimescaleDB, follow these steps:
+AISdb supports SQLite and PostgreSQL databases. When using PostgreSQL, [TimescaleDB](https://www.timescale.com/) is an optional extension that AISdb can take advantage of for its automatic partitioning and compression of time-series data. It is not required (PostgreSQL alone works fine), but for large ingests it is worth setting up. `decode_msgs()` exposes a `timescaledb` argument (default `False`) that switches on the TimescaleDB-aware table schema when inserting data. If you want to enable it, follow these steps first.
 
-_Install TimescaleDB (PostgreSQL Extension)_
+{% stepper %}
+{% step %}
+#### Install TimescaleDB (PostgreSQL Extension)
 
 ```bash
 $ sudo apt install -y timescaledb-postgresql-XX  # XX is the PG-SQL version
 ```
+{% endstep %}
 
-_Enable the Extension in PostgreSQL_
+{% step %}
+#### Enable the Extension in PostgreSQL
 
 ```sql
 > CREATE EXTENSION IF NOT EXISTS timescaledb;
 ```
+{% endstep %}
 
-_Verify the Installation_
+{% step %}
+#### Verify the Installation
 
 ```sql
 > SELECT * FROM timescaledb_information.version;
 ```
+{% endstep %}
 
-_Restart PostgreSQL_
+{% step %}
+#### Restart PostgreSQL
 
 ```bash
 $ sudo systemctl restart postgresql
 ```
+{% endstep %}
+{% endstepper %}
 
 #### Connecting to a **PostgreSQL** database
 
-This option requires an optional dependency `psycopg` for interfacing with Postgres databases. Beware that Postgres accepts these [keyword arguments](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS)[.](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS) Alternatively, a connection string may be used. Information on connection strings and Postgres URI format can be found [here](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING).
+This uses `psycopg`, which installs automatically with `pip install aisdb`, so there's nothing extra to add for interfacing with PostgreSQL databases. PostgreSQL accepts these [keyword arguments](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS). Alternatively, a connection string may be used. Information on connection strings and PostgreSQL URI format can be found [here](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING).
 
 <pre class="language-python" data-line-numbers><code class="lang-python"><strong>from aisdb.database.dbconn import PostgresDBConn
 </strong>
@@ -139,7 +168,7 @@ This option requires an optional dependency `psycopg` for interfacing with Postg
 
 #### Attaching a SQLite database to AISdb
 
-Querying SQLite is as easy as informing the name of a <mark style="background-color:red;">".db" file</mark> with the same entity-relationship as the databases supported by AIS, which are detailed in the [SQL Database](sql-database.md) section. We prepared an example SQLite database `example_data.db` based AIS data in a small region near Maine, United States in Jan 2022 from [Marine Cadastre](https://hub.marinecadastre.gov/pages/vesseltraffic), which is available in AISdb [Tutorial](https://github.com/AISViz/Tutorials) GitHub repository.
+Querying SQLite is as easy as providing the name of a <mark style="background-color:red;">".db" file</mark> with the same entity-relationship model as the databases supported by AISdb, which are detailed in the [SQL Database](sql-database.md) section. We prepared an example SQLite database `example_data.db` based on AIS data from a small region near Maine, United States, in January 2022 from [Marine Cadastre](https://hub.marinecadastre.gov/pages/vesseltraffic), which is available in the AISdb [Tutorial](https://github.com/AISViz/Tutorials) GitHub repository.
 
 <pre class="language-python" data-line-numbers><code class="lang-python"><strong>from aisdb.database.dbconn import SQLiteDBConn 
 </strong>
@@ -151,7 +180,7 @@ If you want to create <mark style="background-color:yellow;">your database using
 
 ### Querying the Database
 
-Parameters for the database query can be defined using [`aisdb.database.dbqry.DBQuery`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.database.dbqry.html#module-aisdb.database.dbqry). Iterate over rows returned from the database for each vessel with [`aisdb.database.dbqry.DBQuery.gen_qry()`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.database.dbqry.html#module-aisdb.database.dbqry). Convert the results into generator-yielding dictionaries with NumPy arrays describing position vectors, _e.g._, lon, lat, and time, using [`aisdb.track_gen.TrackGen()`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.track_gen.html#aisdb.track_gen.TrackGen).
+Parameters for the database query can be defined using [`aisdb.database.dbqry.DBQuery`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.database.dbqry.html#module-aisdb.database.dbqry). Iterate over rows returned from the database for each vessel with [`aisdb.database.dbqry.DBQuery.gen_qry()`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.database.dbqry.html#module-aisdb.database.dbqry). Convert the results into a generator yielding dictionaries with NumPy arrays describing position vectors, _e.g._, lon, lat, and time, using [`aisdb.track_gen.TrackGen()`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.track_gen.html#aisdb.track_gen.TrackGen).
 
 The following query will return vessel trajectories from a given 1-hour time window:
 
@@ -209,7 +238,7 @@ with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
 <strong>    print(ais_data[key])
 </strong></code></pre>
 
-A specific region can be queried for AIS data using [`aisdb.gis.Domain`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.track_gen.html#aisdb.track_gen.TrackGen) or one of its sub-classes to define a collection of `shapely` polygon features. For this example, the domain contains a single bounding box polygon derived from a longitude/latitude coordinate pair and radial distance specified in meters. If multiple features are included in the domain object, the domain boundaries will encompass the convex hull of all features.
+A specific region can be queried for AIS data using [`aisdb.gis.Domain`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.gis.html#aisdb.gis.Domain) or one of its sub-classes to define a collection of `shapely` polygon features. For this example, the domain contains a single bounding box polygon derived from a longitude/latitude coordinate pair and radial distance specified in meters. If multiple features are included in the domain object, the domain boundaries will encompass the convex hull of all features.
 
 <pre class="language-python" data-line-numbers><code class="lang-python"><strong># a circle with a 100km radius around the location point
 </strong>domain = aisdb.DomainFromPoints(points=[(-69.34, 41.55)], radial_distances=[100000])
@@ -230,13 +259,13 @@ A specific region can be queried for AIS data using [`aisdb.gis.Domain`](https:/
 <strong>    print(ais_data[key])
 </strong></code></pre>
 
-Additional query callbacks for filtering by region, timeframe, identifier, etc. can be found in [`aisdb.database.sql_query_strings`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.database.sql_query_strings.html) and [`aisdb.database.sqlfcn_callbacks`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.database.sqlfcn_callbacks.html)`.`
+Additional query callbacks for filtering by region, timeframe, identifier, etc., can be found in [`aisdb.database.sql_query_strings`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.database.sql_query_strings.html) and [`aisdb.database.sqlfcn_callbacks`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.database.sqlfcn_callbacks.html).
 
 ### Processing
 
 #### Voyage Modelling
 
-The above generator can be input into a processing function, yielding modified results. For example, to model the activity of vessels on a per-voyage or per-transit basis, each voyage is defined as a continuous vector of positions where the time between observed timestamps never exceeds 24 hours.
+The above generator can be input into a processing function, yielding modified results. For example, when modeling the activity of vessels on a per-voyage or per-transit basis, each voyage is defined as a continuous vector of positions where the time between observed timestamps never exceeds 24 hours.
 
 <pre class="language-python" data-line-numbers><code class="lang-python"><strong>from datetime import timedelta
 </strong>
@@ -264,13 +293,13 @@ The above generator can be input into a processing function, yielding modified r
 
 #### Data cleaning and MMSI deduplication
 
-A common problem with <mark style="background-color:purple;">**AIS data is noise**</mark>, where multiple vessels might broadcast using the same identifier (sometimes simultaneously). In such cases, AISdb can denoise the data:
+A common problem with <mark style="background-color:purple;">**AIS data is noise**</mark>, where multiple vessels might broadcast using the same identifier (sometimes simultaneously). AISdb denoises this data in three steps.
 
-**(1) Denoising with Encoder:** The [`aisdb.denoising_encoder.encode_greatcircledistance()`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.denoising_encoder.html#aisdb.denoising_encoder.encode_greatcircledistance) function checks the approximate distance between each vessel’s position. It separates vectors where a vessel couldn’t reasonably travel using the most direct path, such as speeds over 50 knots.
+First, <mark style="background-color:yellow;">denoising with the encoder</mark>. The [`aisdb.denoising_encoder.encode_greatcircledistance()`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.denoising_encoder.html#aisdb.denoising_encoder.encode_greatcircledistance) function checks the approximate distance between each vessel's position. It separates vectors where a vessel couldn't reasonably travel using the most direct path, such as when the implied speed exceeds 50 knots.
 
-**(2) Distance and Speed Thresholds:** A distance and speed threshold limits the maximum distance or time between messages that can be considered continuous.
+Second, distance and speed thresholds. These thresholds limit the maximum distance or time between messages that can be considered continuous.
 
-**(3) Scoring and Segment Concatenation:** A score is computed for each position delta, with sequential messages nearby at shorter intervals given a higher score. This score is calculated by dividing the Haversine distance by elapsed time. Any deltas with a score not reaching the minimum threshold are considered the start of a new segment. New segments are compared to the end of existing segments with the same vessel identifier; if the score exceeds the minimum, they are concatenated. If multiple segments meet the minimum score, the new segment is concatenated to the existing segment with the highest score.
+Third, scoring and segment concatenation. A score is computed for each position delta, with sequential messages nearby at shorter intervals given a higher score. This score is calculated by dividing the Haversine distance by elapsed time. Any deltas with a score not reaching the minimum threshold are considered the start of a new segment. New segments are compared to the end of existing segments with the same vessel identifier, and if the score exceeds the minimum, they are concatenated. If multiple segments meet the minimum score, the new segment is concatenated to the existing segment with the highest score.
 
 Notice that processing functions may be executed in sequence as a chain or pipeline, so after segmenting the individual voyages as shown above, results can be input into the encoder to remove noise and correct for vessels with duplicate identifiers.
 
@@ -281,7 +310,7 @@ Notice that processing functions may be executed in sequence as a chain or pipel
 <strong>with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
 </strong>    qry = aisdb.DBQuery(
 <strong>        dbconn=dbconn, start=start_time, end=end_time,
-</strong>        callback=aisdb.database.sqlfcn_callbacks.in_timerange,
+</strong>        callback=aisdb.database.sqlfcn_callbacks.in_timerange_validmmsi,
 <strong>    )
 </strong>    rowgen = qry.gen_qry()
 <strong>    tracks = aisdb.track_gen.TrackGen(rowgen, decimate=False)
@@ -305,8 +334,8 @@ Building on the above processing pipeline, the resulting cleaned trajectories ca
 <pre class="language-python" data-line-numbers><code class="lang-python"><strong># Define a domain with a central point and corresponding radial distances
 </strong>domain = aisdb.DomainFromPoints(points=[(-69.34, 41.55),], radial_distances=[100000,])
 <strong>
-</strong># Filter the encoded tracks to include only those within the specified domain
-<strong>tracks_filtered = aisdb.track_gen.zone_mask(tracks_encoded, domain)
+</strong># Filter the encoded tracks to those inside the domain polygons
+<strong>tracks_filtered = aisdb.track_gen.fence_tracks(tracks_encoded, domain)
 </strong>
 <strong># Interpolate the filtered tracks with a specified time interval
 </strong>tracks_interp = aisdb.interp_time(tracks_filtered, step=timedelta(minutes=15))
@@ -323,20 +352,22 @@ The resulting processed voyage data can be exported in CSV format instead of bei
 
 ### Integration with external metadata
 
-AISDB supports integrating external data sources such as bathymetric charts and other raster grids.
+AISdb supports integrating external data sources such as bathymetric charts and other raster grids.
 
 #### Bathymetric charts
 
-To determine the approximate ocean depth at each vessel position, the[`aisdb.webdata.bathymetry`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.webdata.bathymetry.html) module can be used.
+To determine the approximate ocean depth at each vessel position, the [`aisdb.webdata.bathymetry`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.webdata.bathymetry.html) module can be used.
 
-<pre class="language-python" data-line-numbers><code class="lang-python"><strong>import aisdb
-</strong>
-<strong># Set the data storage directory
-</strong>data_dir = './testdata/'
+<pre class="language-python" data-line-numbers><code class="lang-python"><strong>import os
+</strong>import aisdb
 <strong>
-</strong># Download bathymetry grid from the internet
-<strong>bathy = aisdb.webdata.bathymetry.Gebco(data_dir=data_dir)
-</strong>bathy.fetch_bathymetry_grid()
+</strong># Set the data storage directory (Gebco expects it to already exist)
+<strong>data_dir = './testdata/'
+</strong>os.makedirs(data_dir, exist_ok=True)
+<strong>
+</strong># Gebco() downloads the GEBCO bathymetry grid on first use if it is
+<strong># not already present in data_dir
+</strong>bathy = aisdb.webdata.bathymetry.Gebco(data_dir=data_dir)
 </code></pre>
 
 Once the data has been downloaded, the [`Gebco()`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.webdata.bathymetry.html) class may be used to append bathymetric data to tracks in the context of a [`TrackGen()`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.track_gen.html#aisdb.track_gen.TrackGen) processing pipeline like the processing functions described above.
@@ -349,10 +380,10 @@ Also, see [`aisdb.webdata.shore_dist.ShoreDist`](https://aisviz.cs.dal.ca/AISdb/
 
 #### Rasters
 
-Similarly, arbitrary raster coordinate-gridded data may be appended to vessel tracks
+Similarly, arbitrary coordinate-gridded raster data may be appended to vessel tracks.
 
-<pre class="language-python" data-line-numbers><code class="lang-python"><strong>tracks = aisdb.TrackGen(qry.gen_qry())
-</strong>raster_path './GMT_intermediate_coast_distance_01d.tif'
+<pre class="language-python" data-line-numbers><code class="lang-python"><strong>tracks = aisdb.TrackGen(qry.gen_qry(), decimate=False)
+</strong>raster_path = './GMT_intermediate_coast_distance_01d.tif'
 <strong>
 </strong># Load the raster file
 <strong>raster = aisdb.webdata.load_raster.RasterFile(raster_path)
@@ -363,7 +394,7 @@ Similarly, arbitrary raster coordinate-gridded data may be appended to vessel tr
 
 ### Visualization
 
-AIS data from the database may be overlayed on a map such as the one shown above using the [`aisdb.web_interface.visualize()`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.web_interface.html#aisdb.web_interface.visualize) function. This function accepts a generator of track dictionaries such as those output by [`aisdb.track_gen.TrackGen()`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.track_gen.html#aisdb.track_gen.TrackGen).&#x20;
+AIS data from the database may be overlaid on a map such as the one shown below using the [`aisdb.web_interface.visualize()`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.web_interface.html#aisdb.web_interface.visualize) function. This function accepts a generator of track dictionaries such as those output by [`aisdb.track_gen.TrackGen()`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.track_gen.html#aisdb.track_gen.TrackGen).&#x20;
 
 <pre class="language-python" data-line-numbers><code class="lang-python"><strong>from datetime import datetime, timedelta
 </strong>import aisdb
@@ -404,3 +435,7 @@ AIS data from the database may be overlayed on a map such as the one shown above
 <figure><img src="../.gitbook/assets/image (5).png" alt=""><figcaption><p>Visualization of vessel tracks within a defined time range</p></figcaption></figure>
 
 For a complete plug-and-play solution, you may clone our [Google Colab Notebook](https://colab.research.google.com/drive/1nfDUNfw7WSa5FuxRiggbK2Rvyc5qL5iH?usp=sharing).
+
+### Where to go next
+
+This quick start covers the basics of loading, querying, and visualizing AIS data. The [Tutorials](../tutorials/database-loading.md) section goes deeper into each step, starting with [database loading](../tutorials/database-loading.md), then [data querying](../tutorials/data-querying.md), and [data cleaning](../tutorials/data-cleaning.md) for handling noisy or duplicate position reports.

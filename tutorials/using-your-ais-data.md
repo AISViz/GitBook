@@ -1,18 +1,25 @@
+---
+description: >-
+  Download open-source AIS data or import your own files into AISdb, from
+  a raw CSV through database loading, querying, cleaning, and processing.
+icon: folder-open
+---
+
 # 🔐 Using Your AIS Data
 
-In addition to accessing data stored on the AISdb server, you can download open-source AIS data or import your datasets for processing and analysis using AISdb. <mark style="background-color:yellow;">This tutorial guides you through downloading AIS data from popular websites, creating SQLite and PostgreSQL databases compatible with AISdb, and establishing database connections.</mark> We provide two examples: [_Downloading and Processing Individual Files_](using-your-ais-data.md#downloading-and-processing-individual-files)_,_ which demonstrates working with small data samples and creating an SQLite database, and [_Pipeline for Bulk File Downloads and Database Integration_](using-your-ais-data.md#pipeline-for-bulk-file-downloads-and-database-integration)_,_ which outlines our approach to handling multiple data file downloads and creating a PostgreSQL database.
+In addition to accessing data stored on the AISdb server, you can download open-source AIS data or import your own datasets for processing and analysis using AISdb. <mark style="background-color:yellow;">This tutorial walks through the full pipeline for working with your own AIS files</mark>, from downloading a raw CSV and loading it into a database, through querying, cleaning, and processing the resulting tracks. We provide two loading examples, [_Downloading and Processing Individual Files_](using-your-ais-data.md#downloading-and-processing-individual-files), which demonstrates working with a small data sample and a SQLite database, and [_Pipeline for Bulk File Downloads and Database Integration_](using-your-ais-data.md#pipeline-for-bulk-file-downloads-and-database-integration), which outlines our approach to handling multiple data file downloads and a PostgreSQL database. From there, the tutorial covers querying your database with `DBQuery`, cleaning the resulting tracks, and processing them into a usable form.
 
 ## Data Source
 
-The U.S. vessel traffic data across user-defined geographies and periods are available at [MarineCadastre](https://hub.marinecadastre.gov/pages/vesseltraffic). This resource offers comprehensive AIS data that can be accessed for various maritime analysis purposes. We can tailor the dataset based on research needs by selecting specific regions and timeframes.
+U.S. vessel traffic data across user-defined geographies and periods is available at [MarineCadastre](https://hub.marinecadastre.gov/pages/vesseltraffic). This resource offers comprehensive AIS data that can be accessed for various maritime analysis purposes. We can tailor the dataset based on research needs by selecting specific regions and timeframes.
 
 ## Downloading and Processing Individual Files
 
 In the following example, we will show how to download and process a single data file and import the data to a newly created SQLite database.
 
-First, download the AIS data of the day using the curl command:
+First, download the AIS data for a single day using the curl command:
 
-{% code lineNumbers="true" %}
+{% code title="download.sh" lineNumbers="true" %}
 ```bash
 curl -o ./data/AIS_2020_01_01.zip https://coast.noaa.gov/htdata/CMSP/AISDataHandler/2020/AIS_2020_01_01.zip
 ```
@@ -20,13 +27,13 @@ curl -o ./data/AIS_2020_01_01.zip https://coast.noaa.gov/htdata/CMSP/AISDataHand
 
 Then, extract the downloaded ZIP file to a specific path:
 
-{% code lineNumbers="true" %}
+{% code title="extract.sh" lineNumbers="true" %}
 ```bash
 unzip ./data/AIS_2020_01_01.zip -d ./data/
 ```
 {% endcode %}
 
-We will look into the number of columns in the downloaded CSV file.
+We will look at the columns in the downloaded CSV file.
 
 {% code lineNumbers="true" %}
 ```python
@@ -48,7 +55,7 @@ Index(['MMSI', 'BaseDateTime', 'LAT', 'LON', 'SOG', 'COG', 'Heading',
 ```
 {% endcode %}
 
-The required columns for AISdb have specific names and may differ from the imported dataset. Therefore, let's define the exact list of columns needed.
+The required columns for AISdb have specific names and may differ from those in the imported dataset. Therefore, let's define the exact list of columns needed.
 
 {% code lineNumbers="true" %}
 ```
@@ -56,9 +63,9 @@ list_of_headers_ = ["MMSI","Message_ID","Repeat_indicator","Time","Millisecond",
 ```
 {% endcode %}
 
-Next, we update the name of columns in the existing dataframe `df_` and change the time format as required. The timestamp of an AIS message is represented by `BaseDateTime` in the default format `YYYY-MM-DDTHH:MM:SS`. For AISdb, however, the time is represented in UNIX format. We now read the CSV and apply the necessary changes to the date format:
+Next, we update the column names in the existing dataframe `df_` and change the time format as required. The timestamp of an AIS message is represented by `BaseDateTime` in the default format `YYYY-MM-DDTHH:MM:SS`. For AISdb, however, the time is represented in UNIX format. We now read the CSV and apply the necessary changes to the date format:
 
-{% code lineNumbers="true" %}
+{% code title="process.py" lineNumbers="true" %}
 ```python
 # Take the first 40,000 records from the original dataframe
 df = df_.iloc[0:40000]
@@ -98,7 +105,7 @@ df_new.to_csv("./data/AIS_2020_01_01_aisdb.csv", index=False, quoting=1)
 ```
 {% endcode %}
 
-In the code, we can see that we have mapped the column named accordingly. Additionally, the data type of some columns has also been changed. Additionally, the nm4 file usually contains raw messages, separating static messages from dynamic ones. However, the MarineCadastre Data does not have such a Message\_ID to indicate the type. Thus, adding static messages is necessary for database creation so that a table related to metadata is created.
+In the code, we can see that we have mapped the column names accordingly. The data type of some columns has also been changed. An nm4 file usually contains raw messages with a Message\_ID separating static messages from dynamic ones; however, the MarineCadastre data does not have such an indicator of message type. Thus, adding static messages is necessary for database creation so that a table related to metadata is created.
 
 Let's process the CSV to create an SQLite database using the aisdb package.
 
@@ -127,7 +134,7 @@ aggregating static reports into static_202001_aggregate...
 ```
 {% endcode %}
 
-A SQLite database has been created now.&#x20;
+A SQLite database has now been created.&#x20;
 
 {% code lineNumbers="true" %}
 ```bash
@@ -139,88 +146,212 @@ ais_202001_static        hashmap
 ```
 {% endcode %}
 
-If prefer to progress to PostgreSQL database, defining postgresql string and progress with database connection:
+If you would rather load the same file into PostgreSQL, connect with `PostgresDBConn` instead of `SQLiteDBConn` and pass the same `filepaths` list to `decode_msgs`. `PostgresDBConn` accepts either a set of keyword arguments or a libpq connection string.
 
+{% code lineNumbers="true" %}
+```python
+import aisdb
+
+psql_conn_string = "postgresql://USERNAME:PASSWORD@HOST:PORT/DATABASE"
+
+with aisdb.PostgresDBConn(libpq_connstring=psql_conn_string) as dbconn:
+    aisdb.decode_msgs(filepaths=["./data/AIS_2020_01_01_aisdb.csv"],
+                      dbconn=dbconn, source='Testing', verbose=True)
 ```
-// Some code
+{% endcode %}
+
+The keyword-argument form is equivalent and often easier to keep in a config file or environment variables.
+
+{% code lineNumbers="true" %}
+```python
+import os
+import aisdb
+
+with aisdb.PostgresDBConn(
+        host='localhost',
+        port=5432,
+        user='postgres',
+        password=os.environ.get('POSTGRES_PASSWORD'),
+        dbname='aisdb',
+) as dbconn:
+    aisdb.decode_msgs(filepaths=["./data/AIS_2020_01_01_aisdb.csv"],
+                      dbconn=dbconn, source='Testing', verbose=True)
 ```
+{% endcode %}
 
+Everything downstream, querying, cleaning, and processing, works identically against a PostgreSQL connection, since `DBQuery` accepts any `SQLiteDBConn` or `PostgresDBConn` object.
 
+## Querying Your Own Data
 
+Once your file is decoded and sitting in a database, the loading step is done and the rest of the pipeline is the same regardless of where the data came from. Querying uses `DBQuery` to select rows by time range and location, then `TrackGen` to reshape those rows into per-vessel track dictionaries. Both classes are covered in more depth in [_Data Querying_](data-querying.md); here we apply them directly to the SQLite database created above.
 
+{% code lineNumbers="true" %}
+```python
+from datetime import datetime
+import aisdb
 
+dbpath = './data/test_decode_msgs.db'
 
+start_time = datetime(2020, 1, 1)
+end_time = datetime(2020, 1, 2)
 
+with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
+    qry = aisdb.DBQuery(
+        dbconn=dbconn,
+        start=start_time,
+        end=end_time,
+        callback=aisdb.database.sqlfcn_callbacks.in_timerange_validmmsi,
+    )
+    rowgen = qry.gen_qry()
+    tracks = aisdb.TrackGen(rowgen, decimate=True)
 
+    for track in tracks:
+        print(track['mmsi'], track['lon'].size)
+```
+{% endcode %}
+
+`in_timerange_validmmsi` restricts the query to the given window and drops rows with a malformed MMSI, which is a sensible default when the source data has not been cleaned yet. `gen_qry()` yields rows sorted by MMSI and time, and `TrackGen` collapses those rows into one dictionary per vessel, with `decimate=True` applying linear curve decimation to drop redundant points along straight segments.
+
+## Cleaning the Data
+
+Data pulled from a real-world source such as MarineCadastre or your own receiver will contain some amount of noise, duplicate MMSIs, anchored vessels, and the occasional impossible jump in position. AISdb's `denoising_encoder` module handles this. The [_Data Cleaning_](data-cleaning.md) tutorial covers the module in detail; a minimal pipeline on the tracks queried above looks like this.
+
+{% code lineNumbers="true" %}
+```python
+import aisdb
+
+# Drop pings recorded at 0.5 knots or slower (anchored or moored vessels)
+moving_tracks = aisdb.remove_pings_wrt_speed(tracks, speed_threshold=0.5)
+
+# Split and re-link segments where speed or distance imply impossible jumps
+clean_tracks = aisdb.encode_greatcircledistance(
+    moving_tracks,
+    distance_threshold=20000,  # meters
+    speed_threshold=50,        # knots
+    minscore=1e-6,
+)
+```
+{% endcode %}
+
+`remove_pings_wrt_speed()` and `encode_greatcircledistance()` both accept and return a track generator, so they chain in whatever order suits the noise in your data. Since these are generators, nothing is computed until the tracks are consumed downstream.
+
+## Processing and Exporting
+
+With the tracks queried and cleaned, the last step is turning them into something usable, whether that is an interpolated trajectory, a CSV file, or a map. `aisdb.interp_time()` resamples a track to a fixed time step, which is useful for aligning trajectories to a common temporal grid before further analysis.
+
+{% code lineNumbers="true" %}
+```python
+from datetime import timedelta
+import aisdb
+
+interpolated_tracks = aisdb.interp_time(clean_tracks, step=timedelta(minutes=10))
+```
+{% endcode %}
+
+To save the processed tracks to disk, `aisdb.write_csv()` writes each track's column vectors as rows in a CSV file.
+
+{% code lineNumbers="true" %}
+```python
+import aisdb
+
+aisdb.write_csv(interpolated_tracks, fpath='./data/processed_tracks.csv')
+```
+{% endcode %}
+
+Or, to inspect the result visually instead, pass the tracks straight to `aisdb.web_interface.visualize()`, the same way earlier tutorials do.
+
+{% code lineNumbers="true" %}
+```python
+import aisdb
+
+if __name__ == '__main__':
+    aisdb.web_interface.visualize(
+        interpolated_tracks,
+        visualearth=True,
+        open_browser=True,
+    )
+```
+{% endcode %}
+
+That covers the full pipeline for your own AIS files, loading raw messages into a database with `decode_msgs`, querying them back out with `DBQuery` and `TrackGen`, cleaning the result with the `denoising_encoder` functions, and processing the cleaned tracks into an interpolated trajectory, a CSV export, or a visualization.
 
 ## Pipeline for Bulk File Downloads and Database Integration
 
-This section provides an example of downloading and processing multiple files, creating a PostgreSQL database, and loading data into tables. The steps are outlined in a series of pipeline scripts available in this [GitHub repository](https://github.com/AISViz/NOAA-AIS-Integrator), which should be executed in the order indicated by their numbers.
+This section provides an example of downloading and processing multiple files and loading the data into an AISdb-aligned database. The pipeline is packaged as the `noaa-integrator` command-line tool, available in this [GitHub repository](https://github.com/AISViz/NOAA-Integrator). Each stage is a subcommand; run the stages you need, in order.
 
-### AIS Data Download and Extraction
+{% stepper %}
+{% step %}
+#### Install the tool
 
-The first script, `0-download-ais.py`, allows you to download AIS data from [MarineCadastre](https://hub.marinecadastre.gov/pages/vesseltraffic) by specifying your needed years. If no years are specified, the script will default to downloading data for 2023. The downloaded ZIP files will be stored in a `/data` folder created in your current working directory. The second script, `1-zip2csv.py`, extracts the CSV files from the downloaded ZIP files in `/data` and saves them in a new directory named `/zip`.&#x20;
+Clone the repository and sync its environment with [uv](https://docs.astral.sh/uv/):
 
-To download and extract the data, simply run the two scripts in sequence:
-
-{% code lineNumbers="true" %}
-```sh
-python 0-download-ais.py
-python 1-zip2csv.py
-```
-{% endcode %}
-
-### Preprocessing - Merge and Deduplication
-
-After downloading and extracting the AIS data, the `2-merge.py` script consolidates the daily CSV files into monthly files while the `3-deduplicate.py` script removes duplicate rows, retaining unique AIS messages. To perform the execution, simply run:
-
-{% code lineNumbers="true" %}
+{% code title="install.sh" lineNumbers="true" %}
 ```bash
-python 2-merge.py
-python 3-deduplicate.py
+git clone https://github.com/AISViz/NOAA-Integrator
+cd NOAA-Integrator
+uv sync --extra load
 ```
 {% endcode %}
+{% endstep %}
 
-The output of these two scripts will be cleaned CSV files, which will be stored in a new folder named `/merged` on your working directory.
+{% step %}
+#### AIS Data Download and Extraction
 
-### PostgreSQL Database Creation and Data Loading to Tables
+The `download` stage fetches AIS archives from [MarineCadastre](https://hub.marinecadastre.gov/pages/vesseltraffic) for the years you specify, the `organize` stage groups them into `{year}{month}` folders, and the `extract` stage decompresses them. All NOAA formats are handled, including daily ZIP archives (2015-2024) and Zstandard-compressed CSV (2025 onward).
 
-The final script, `4-postgresql-database.py`, creates a PostgreSQL database with a specified name. To do this, the script connects to a PostgreSQL server, requiring you to provide your username and password to establish the connection. After creating the database, the script verifies that the number of columns in the CSV files matches the headers. The script creates a corresponding table in the database for each CSV file and loads the data into it. To run this script, you need to provide three command-line arguments: `-dbname` for the new database name, `-user` for your PostgreSQL username, and `-password` for your PostgreSQL password. Additionally, there are two optional arguments: `-host` (default is `localhost`) and `-port` (default is `5432`), you can adjust the `-host` and `-port` values if your PostgreSQL server is running on a different host or port.
-
-{% code lineNumbers="true" %}
+{% code title="download_extract.sh" lineNumbers="true" %}
 ```bash
-python 4-postgresql-database.py -dbname DBNAME -user USERNAME -password PASSWORD [-host HOST] [-port PORT]
+uv run noaa-integrator download --start-year 2023 --end-year 2023 --dest data/downloads
+uv run noaa-integrator organize --base-dir data/downloads
+uv run noaa-integrator extract --base-dir data/downloads --dest data/extracted
 ```
 {% endcode %}
+{% endstep %}
 
-When the program prompts that the task is finished, you may check the created database and loaded tables by connecting to the PostgreSQL server and using the `psql` command-line interface:
+{% step %}
+#### Preprocessing - Geographic Filtering and Deduplication
 
-{% code lineNumbers="true" %}
+The optional `filter` stage keeps only records inside a geographic bounding box, and the `dedup` stage removes duplicate rows, retaining unique AIS messages:
+
+{% code title="filter_dedup.sh" lineNumbers="true" %}
+```bash
+uv run noaa-integrator filter \
+    --base-dir data/extracted --dest data/filtered \
+    --start-year 2023 --end-year 2023 \
+    --min-lon -77.36 --min-lat 36.02 --max-lon -57.62 --max-lat 48.64
+uv run noaa-integrator dedup --directory data/filtered/202301
+```
+{% endcode %}
+{% endstep %}
+
+{% step %}
+#### Database Loading
+
+The `load` stage decodes the CSV files into an AISdb database through `aisdb.decode_msgs`, one month batch at a time, with automatic retries for failed batches. Both SQLite and PostgreSQL targets are supported; PostgreSQL credentials come from the `--dsn` argument or the `NOAA_PG_DSN` environment variable:
+
+{% code title="load.sh" lineNumbers="true" %}
+```bash
+# SQLite
+uv run noaa-integrator load --source-dir data/filtered \
+    --start-year 2023 --end-year 2023 --sqlite marine_cadastre.db
+
+# PostgreSQL / TimescaleDB
+export NOAA_PG_DSN='postgresql://USERNAME:PASSWORD@localhost:5432/DBNAME'
+uv run noaa-integrator load --source-dir data/filtered \
+    --start-year 2023 --end-year 2023 --dsn --timescaledb
+```
+{% endcode %}
+{% endstep %}
+
+{% step %}
+#### Query the loaded data
+
+Once loading finishes, the data is queryable with the standard AISdb interfaces (`DBQuery`, `TrackGen`) shown earlier in this tutorial, or directly with `psql`:
+
+{% code title="query.sh" lineNumbers="true" %}
 ```bash
 psql -U USERNAME -d DBNAME -h localhost -p 5432
 ```
 {% endcode %}
-
-Once connected, you can list all tables in the database by running the `\dt` command. In our example using 2023 AIS data (default download), the tables will appear as follows:
-
-{% code lineNumbers="true" %}
-```
-ais_pgdb=# \dt
-           List of relations
- Schema |    Name     | Type  |  Owner  
---------+-------------+-------+----------
- public | ais_2023_01 | table | postgres
- public | ais_2023_02 | table | postgres
- public | ais_2023_03 | table | postgres
- public | ais_2023_04 | table | postgres
- public | ais_2023_05 | table | postgres
- public | ais_2023_06 | table | postgres
- public | ais_2023_07 | table | postgres
- public | ais_2023_08 | table | postgres
- public | ais_2023_09 | table | postgres
- public | ais_2023_10 | table | postgres
- public | ais_2023_11 | table | postgres
- public | ais_2023_12 | table | postgres
-(12 rows) 
-```
-{% endcode %}
+{% endstep %}
+{% endstepper %}

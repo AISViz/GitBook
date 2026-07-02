@@ -1,100 +1,99 @@
 ---
 description: >-
-  In this page, we will see how we can use AISDb to discretize AIS tracks to
+  In this page, we will see how we can use AISdb to discretize AIS tracks to
   hexagons.
-icon: globe
+icon: hexagon
 ---
 
 # Hexagon Discretization
 
 ## Introduction
 
-Hexagonal Geospatial Indexing (H3): Uber’s hierarchical hexagonal geospatial indexing system, partitions&#x20;the Earth into a multi-resolution hexagonal grid. Its key&#x20;advantage over square grids is the “one-distance rule,” where&#x20;all neighbors of a hexagon lie at comparable step distances.
+H3 is Uber's hierarchical hexagonal geospatial indexing system. It partitions the Earth into a multi-resolution hexagonal grid, and its key advantage over square grids is the "one-distance rule," where all neighbors of a hexagon lie at comparable step distances.
 
 <figure><img src="../.gitbook/assets/hex.png" alt=""><figcaption></figcaption></figure>
 
-As illustrated in the figure above, this uniformity removes the diagonal-versus-edge ambiguity present in square lattices. For maritime work, hexagons are great because they reduce directional bias and make neighborhood queries and aggregation intuitive.&#x20;
+As illustrated in the figure above, this uniformity removes the diagonal-versus-edge ambiguity present in square lattices. For maritime work, hexagons are great because they reduce directional bias and make neighborhood queries and aggregation intuitive.
 
-> Note: H3 indexes are 64-bit IDs typically shown as hex strings like “860e4d31fffffff.”
+> H3 indexes are 64-bit IDs typically shown as hex strings, such as `860e4d31fffffff`.
 
-### Discretize AIS Lat/Lon points to hexagons using AISDb
+### Discretize AIS lat/lon points to hexagons using AISdb
 
-The code below provides a complete example of how to connect to a database of AIS data using AISDb and generate the corresponding H3 index for each data point.
+{% hint style="warning" %}
+The `aisdb.discretize.h3` module landed after the 1.8.0-alpha release, so it is not in that tag or in the PyPI package. To follow this tutorial, install AISdb from the development branch with `pip install git+https://github.com/AISViz/AISdb.git` (a Rust toolchain is required to build it).
+{% endhint %}
 
+AISdb's `aisdb.discretize.h3.Discretizer` class wraps the [h3-py](https://uber.github.io/h3-py/) bindings so you can go from a stream of AIS tracks straight to H3 cell IDs, without hand-rolling the lat/lon-to-cell conversion yourself. The code below connects to a PostgreSQL database, queries a bounding box and time window in the Gulf of St. Lawrence, and tags each point in the resulting tracks with its H3 index.
+
+{% code title="discretize_tracks.py" lineNumbers="true" %}
 ```python
 import aisdb
 from aisdb import DBQuery
 from aisdb.database.dbconn import PostgresDBConn
 from datetime import datetime, timedelta
-from aisdb.discretize.h3 import Discretizer  # main import to convert lat/lon to H3 indexes
+from aisdb.discretize.h3 import Discretizer
 
-# >>> PostgreSQL connection details (replace placeholders or use environment variables) <<<
-db_user = '<>'            # PostgreSQL username
-db_dbname = '<>'          # PostgreSQL database/schema name
-db_password = '<>'        # PostgreSQL password
-db_hostaddr = '127.0.0.1' # PostgreSQL host (localhost shown)
+# PostgreSQL connection details (replace placeholders or use environment variables)
+db_user = '<>'             # PostgreSQL username
+db_dbname = '<>'           # PostgreSQL database/schema name
+db_password = '<>'         # PostgreSQL password
+db_hostaddr = '127.0.0.1'  # PostgreSQL host address (localhost shown)
 
-# Create a database connection handle for AISDB to use
 dbconn = PostgresDBConn(
-    port=5555,            # PostgreSQL port (5432 is default; 5555 here is just an example)
-    user=db_user,         # username for authentication
-    dbname=db_dbname,     # database/schema to connect to
-    host=db_hostaddr,     # host address or DNS name
-    password=db_password, # password for authentication
+    port=5555,             # PostgreSQL port (5432 is the default; 5555 here is just an example)
+    user=db_user,
+    dbname=db_dbname,
+    hostaddr=db_hostaddr,
+    password=db_password,
 )
 
-# ------------------------------
-# Define the spatial and temporal query window
-# Note: bbox is [xmin, ymin, xmax, ymax] in lon/lat; variables below help readability
+# Spatial and temporal query window over the Gulf of St. Lawrence
 xmin, ymin, xmax, ymax = -70, 45, -58, 53
-gulf_bbox = [xmin, xmax, ymin, ymax]  # optional helper; not used directly below
+start_time = datetime(2023, 8, 1)
+end_time = datetime(2023, 8, 2)
 
-start_time = datetime(2023, 8, 1)     # query start (inclusive)
-end_time   = datetime(2023, 8, 2)     # query end (exclusive or inclusive per DB settings)
-
-# Build a query that streams AIS rows in the time window and bounding box
+# DBQuery takes the bounding box as four separate keyword arguments, not a
+# single bbox list, and the callback picks the SQL "WHERE" clause it applies.
 qry = DBQuery(
     dbconn=dbconn,
     start=start_time, end=end_time,
     xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax,
-    # Callback filters rows by time, bbox, and ensures MMSI validity (helps remove junk)
-    callback=aisdb.database.sqlfcn_callbacks.in_time_bbox_validmmsi
+    callback=aisdb.database.sqlfcn_callbacks.in_time_bbox_validmmsi,
 )
+rowgen = qry.gen_qry()
 
-# Prepare containers/generators for streamed processing (memory-efficient)
-ais_tracks = []          # placeholder list if you want to collect tracks (unused below)
-rowgen = qry.gen_qry()   # generator that yields raw AIS rows from the database
+# A resolution of 6 gives hexagons roughly the size of a small region; raise
+# it for finer grids, lower it for coarser ones.
+discretizer = Discretizer(resolution=6)
 
-# ------------------------------
-# Instantiate the H3 Discretizer at a chosen resolution
-# Resolution 6 ≈ regional scale hexagons; increase for finer grids, decrease for coarser grids
-# Note: variable name 'descritizer' is kept to match the original snippet (typo is harmless)
-descritizer = Discretizer(resolution=6)
-
-# Build tracks from rows; decimate=True reduces oversampling and speeds up processing
+# TrackGen groups the raw rows into per-vessel tracks, and split_timedelta
+# breaks long tracks into fixed-length segments so a single vessel's history
+# doesn't blend into one enormous track.
 tracks = aisdb.track_gen.TrackGen(rowgen, decimate=True)
+tracks_segment = aisdb.track_gen.split_timedelta(tracks, timedelta(weeks=4))
 
-# Optionally split long tracks into time-bounded segments (e.g., 4-week chunks)
-# Useful for chunked processing or time-based aggregation; not used further in this snippet
-tracks_segment = aisdb.track_gen.split_timedelta(
-    tracks,
-    timedelta(weeks=4)
-)
+# yield_tracks_discretized_by_indexes adds an 'h3_index' array to each track,
+# aligned point-for-point with its 'lat' and 'lon' arrays.
+tracks_with_indexes = discretizer.yield_tracks_discretized_by_indexes(tracks_segment)
 
-# Discretize each track: adds an H3 index array aligned with lat/lon points for that track
-# Each yielded track will have keys like 'lat', 'lon', and 'h3_index'
-tracks_with_indexes = descritizer.yield_tracks_discretized_by_indexes(tracks)
+for track in tracks_with_indexes:
+    print(f"H3 index for lat {track['lat'][0]}, lon {track['lon'][0]}: {track['h3_index'][0]}")
+    break
 
-# Example (optional) usage:
-# for t in tracks_with_indexes:
-#     # Access the first point's H3 index for this track
-#     print(t['mmsi'], t['timestamp'][0], t['lat'][0], t['lon'][0], t['h3_index'][0])
-#     break
+# Output: H3 index for lat 50.003334045410156, lon -66.76000213623047: 860e4d31fffffff
+```
+{% endcode %}
 
-# Output: H3 Index for lat 50.003334045410156, lon -66.76000213623047: 860e4d31fffffff
+The `Discretizer` also exposes a couple of methods worth knowing about beyond the streaming path above. `get_h3_index(lat, lon)` converts a single coordinate pair to its H3 cell ID, useful when you already have a point and don't need the full track pipeline. `get_polygon_from_cells(cells, tight=True)` takes a list of H3 cell IDs and returns their combined boundary as a Shapely geometry, handy for drawing the hexagon footprint of a set of cells on a map. And `describe()` prints and plots how hexagon area changes with latitude at the chosen resolution, plus a table of edge lengths across all 16 H3 resolutions, which is a quick way to sanity-check that the resolution you picked matches the scale of the analysis.
+
+```python
+# Inspect how resolution 6 hexagons scale with latitude and print edge lengths
+discretizer.describe()
 ```
 
-Refer to the example notebook here: [https://github.com/AISViz/AISdb/blob/master/examples/discretize.ipynb](https://github.com/AISViz/AISdb/blob/master/examples/discretize.ipynb)
+`describe()` relies on `matplotlib` and `geopandas`, both of which install automatically as core AISdb dependencies, so there's nothing extra to add.
+
+Refer to the example notebook for the full walkthrough, including the `describe()` output. [https://github.com/AISViz/AISdb/blob/master/examples/discretize.ipynb](https://github.com/AISViz/AISdb/blob/master/examples/discretize.ipynb)
 
 ## References
 

@@ -1,10 +1,17 @@
+---
+description: >-
+  Load AIS data into a SQLite or PostgreSQL database with AISdb, from
+  installation through a full-year Spire ingestion example.
+icon: download
+---
+
 # 📥 Database Loading
 
 This tutorial will guide you in using the <mark style="background-color:yellow;">**AISdb**</mark> package to load AIS data into a database and perform queries. We will begin with **AISdb** installation and environment setup, then proceed to examples of querying the loaded data and creating simple visualizations.
 
 ## Install Requirements <a href="#id-1.-install-requirements" id="id-1.-install-requirements"></a>
 
-Preparing a Python virtual environment for AISdb is a safe practice. It allows you to manage dependencies and prevent conflicts with other projects, ensuring a clean and isolated setup for your work with AISdb. Run these commands in your terminal based on the operating system you are using:
+Preparing a Python virtual environment for AISdb is a good practice. It allows you to manage dependencies and prevent conflicts with other projects, ensuring a clean and isolated setup for your work with AISdb. Run these commands in your terminal based on the operating system you are using:
 
 {% code title="Linux" lineNumbers="true" %}
 ```bash
@@ -28,11 +35,11 @@ Now you can check your installation by running:
 ```bash
 $ python
 >>> import aisdb
->>> aisdb.__version__        # should return '1.7.0' or newer
+>>> aisdb.__version__        # '1.8.0-alpha' when built from source, or the latest PyPI release
 ```
 {% endcode %}
 
-If you're using AISdb in [Jupyter](https://jupyter.org/) Notebook,  please include the following commands in your notebook cells:
+If you're using AISdb in a [Jupyter](https://jupyter.org/) Notebook, please include the following commands in your notebook cells:
 
 {% code lineNumbers="true" %}
 ```bash
@@ -67,27 +74,28 @@ AISdb includes two database connection approaches:&#x20;
 1. SQLite database connection; and,
 2. PostgreSQL database connection.
 
-### SQLite database connection
-
-We are working with the SQLite database in most of the usage scenarios. Here is an example of loading data using the sample data included in the AISdb package:
+{% tabs %}
+{% tab title="SQLite" %}
+We work with the SQLite database in most usage scenarios. Here is an example of loading data using the sample data included in the AISdb package:
 
 <pre class="language-python" data-line-numbers><code class="lang-python"># List the test data files included in the package
 print(os.listdir(os.path.join(aisdb.sqlpath, '..', 'tests', 'testdata')))
-# You will see the print result: 
-# ['test_data_20210701.csv', 'test_data_20211101.nm4', 'test_data_20211101.nm4.gz']
+# You will see files such as:
+# ['test_data_20210701.csv', 'test_data_20211101.nm4', 'test_data_20211101.nm4.gz',
+#  'test_data_20211101.nm4.zip', 'test_data_201201.nmea', 'test_data_noaa_20230101.csv']
 
 # Set the path for the SQLite database file to be used
-<a data-footnote-ref href="#user-content-fn-1">dbpath = './</a>test_database<a data-footnote-ref href="#user-content-fn-1">.db'</a>
+dbpath = './test_database.db'
 
 # Use test_data_20210701.csv as the test data
 filepaths = [os.path.join(aisdb.sqlpath, '..', 'tests', 'testdata', 'test_data_20210701.csv')]
-with aisdb.DBConn(dbpath = dbpath) as dbconn:
+with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
     aisdb.decode_msgs(filepaths=filepaths, dbconn=dbconn, source='TESTING')
 </code></pre>
 
 The code above decodes the AIS messages from the CSV file specified in `filepaths` and inserts them into the SQLite database connected via `dbconn`.&#x20;
 
-Following is a quick example of a **query** and **visualization** of the data we just loaded with AISdb:
+The following is a quick example of a **query** and **visualization** of the data we just loaded with AISdb:
 
 {% code lineNumbers="true" %}
 ```python
@@ -97,8 +105,7 @@ end_time = datetime.strptime("2021-07-02 00:00:00", '%Y-%m-%d %H:%M:%S')
 with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
     qry = aisdb.DBQuery(
         dbconn=dbconn,
-        dbpath='./AIS2.db',
-        callback=aisdb.database.sql_query_strings.in_timerange,
+        callback=aisdb.database.sqlfcn_callbacks.in_timerange_validmmsi,
         start=start_time,
         end=end_time,
     )
@@ -115,16 +122,10 @@ with aisdb.SQLiteDBConn(dbpath=dbpath) as dbconn:
 {% endcode %}
 
 <figure><img src="../.gitbook/assets/image (17).png" alt=""><figcaption><p>Visualization of vessel tracks queried from SQLite database created from test data</p></figcaption></figure>
+{% endtab %}
 
-### PostgreSQL database connection
-
-In addition to SQLite database connection, PostgreSQL is used in AISdb for its superior concurrency handling and data-sharing capabilities, making it suitable for collaborative environments and handling larger datasets efficiently. The structure and interactions with PostgreSQL are designed to provide robust and scalable solutions for AIS data storage and querying. For PostgreSQL, you need the `psycopg2` library:
-
-{% code lineNumbers="true" %}
-```bash
-pip install psycopg2
-```
-{% endcode %}
+{% tab title="PostgreSQL" %}
+In addition to SQLite, AISdb supports PostgreSQL, which handles concurrent access and data sharing better than SQLite and scales more comfortably to larger, collaborative deployments. `psycopg` (the PostgreSQL driver AISdb uses under the hood) ships as a core dependency, so `pip install aisdb` already gives you everything you need, no separate driver install required.
 
 To connect to a PostgreSQL database, AISdb uses the `PostgresDBConn` class:
 
@@ -146,26 +147,43 @@ dbconn = PostgresDBConn('postgresql://USERNAME:PASSWORD@HOST:PORT/DATABASE')
 ```
 {% endcode %}
 
-After establishing a connection to the PostgreSQL database, specifying the path of the data files, and using the `aisdb.decode_msgs` function for data processing, the following operations will be performed in order: data files processing, table creation, data insertion, and index rebuilding.
+After you open a connection to PostgreSQL and point `aisdb.decode_msgs` at your data files, it runs through file parsing, table creation, data insertion, and index rebuilding, in that order.
 
-Please pay close attention to the flags in `aisdb.decode_msgs`, as recent updates provide more flexibility for database configurations. These updates include support for ingesting NOAA data into the `aisdb` format and the option to structure tables using either the original **B-Tree indexes** or **TimescaleDB’s structure** when the extension is enabled. In particular, please take care of the following parameters:
+Please pay close attention to the arguments of `aisdb.decode_msgs`, since they control how files are parsed, how fast the load runs, and which table layout gets used. The full signature is `decode_msgs(filepaths, dbconn, source, vacuum=False, skip_checksum=True, workers=4, type_preference="all", raw_insertion=True, verbose=True, timescaledb=False)`. The parameters worth understanding before a large load are:
 
-* **`source`** _(str, optional)_\
-  Specifies the data source to be processed and loaded into the database.
-  * Options: `"Spire"`, `"NOAA"`/`"noaa"`, or leave empty.
-  * **Default**: empty but will progress with Spire source.
+* **`source`** _(str, required)_\
+  A free-form label identifying where the data came from, stored alongside each decoded message (for example `"Spire"`, `"NOAA"`, or `"TESTING"`). There is no default; you must always pass one. If the string contains `"noaa"` (case-insensitive), AISdb switches to parsing NOAA's `BaseDateTime` CSV column instead of the generic `Time` column.
+* **`workers`** _(int, optional)_
+  * Number of parallel worker processes used to decode files.
+  * **Default**: `4`.
+* **`type_preference`** _(str, optional)_
+  * Which AIS message types to keep during decoding (`"all"`, `"static"`, or `"dynamic"`).
+  * **Default**: `"all"`.
 * **`raw_insertion`** _(bool, optional)_
-  * If `False`, the function will drop and rebuild indexes to **speed up data loading**.
+  * If `True`, rows are inserted without maintaining indexes as you go, which is significantly faster for bulk loads. Indexes get (re)built afterward. Set to `False` only for small, incremental inserts into an already-indexed table.
   * **Default**: `True`.
+* **`skip_checksum`** _(bool, optional)_
+  * If `True`, skips the MD5 checksum lookup AISdb otherwise uses to avoid re-ingesting a file it has already processed.
+  * **Default**: `True`.
+* **`vacuum`** _(bool, optional)_
+  * If `True`, runs a `VACUUM` on the database after insertion to reclaim space and update planner statistics.
+  * **Default**: `False`.
 * **`timescaledb`** _(bool, optional)_
-  * Set to `True` **only if** using the TimescaleDB extension in your PostgreSQL database.
-  * Refer to the [TimescaleDB documentation](https://docs.timescale.com/self-hosted/latest/) for proper setup and usage.
+  * Set to `True` **only if** using the TimescaleDB extension in your PostgreSQL database, which structures dynamic tables as hypertables instead of the original per-month **B-Tree indexed** tables.
+  * **Default**: `False`. Refer to the [TimescaleDB documentation](https://docs.timescale.com/self-hosted/latest/) for proper setup and usage.
+{% endtab %}
+{% endtabs %}
 
 ### Example: Processing a Full Year of Spire Data (2024)
 
 The following example demonstrates how to process and load Spire data for the entire year 2024 into an `aisdb` database with the TimescaleDB extension installed:
 
+{% code title="spire_year_ingest.py" lineNumbers="true" %}
 ```python
+import time
+
+psql_conn_string = 'postgresql://USERNAME:PASSWORD@HOST:PORT/DATABASE'
+
 start_year = 2024
 end_year = 2024
 start_month = 1
@@ -197,45 +215,45 @@ for year in range(start_year, end_year + 1):
                 print(f'Error loading {year}{month:02d}: {e}')
                 continue
 ```
+{% endcode %}
 
 Example of performing queries and visualizations with PostgreSQL database:
 
 {% code lineNumbers="true" %}
 ```python
-from aisdb.gis import DomainFromPoints
-from aisdb.database.dbqry import DBQuery
 from datetime import datetime
+import aisdb
+from aisdb.gis import DomainFromPoints
 
 # Define a spatial domain centered around the point (-63.6, 44.6) with a radial distance of 50000 meters.
 domain = DomainFromPoints(points=[(-63.6, 44.6)], radial_distances=[50000])
 
-# Create a query object to fetch AIS data within the specified time range and spatial domain.
-qry = DBQuery(
-    dbconn=dbconn,
-    start=datetime(2023, 1, 1), end=datetime(2023, 2, 1),
-    xmin=domain.boundary['xmin'], xmax=domain.boundary['xmax'],
-    ymin=domain.boundary['ymin'], ymax=domain.boundary['ymax'],
-    callback=aisdb.database.sqlfcn_callbacks.in_time_bbox_validmmsi
-)
+with aisdb.PostgresDBConn(libpq_connstring=psql_conn_string) as dbconn:
+    # Create a query object to fetch AIS data within the specified time range and spatial domain.
+    qry = aisdb.DBQuery(
+        dbconn=dbconn,
+        start=datetime(2023, 1, 1), end=datetime(2023, 2, 1),
+        xmin=domain.boundary['xmin'], xmax=domain.boundary['xmax'],
+        ymin=domain.boundary['ymin'], ymax=domain.boundary['ymax'],
+        callback=aisdb.database.sqlfcn_callbacks.in_time_bbox_validmmsi
+    )
 
-# Generate rows from the query
-rowgen = qry.gen_qry()
+    # Generate rows from the query
+    rowgen = qry.gen_qry()
 
-# Convert the generated rows into tracks
-tracks = aisdb.track_gen.TrackGen(rowgen, decimate=False)
+    # Convert the generated rows into tracks
+    tracks = aisdb.track_gen.TrackGen(rowgen, decimate=False)
 
-# Visualize the tracks on a map
-aisdb.web_interface.visualize(
-    tracks,           # The tracks (trajectories) to visualize.
-    domain=domain,    # The spatial domain to use for the visualization.
-    visualearth=True, # If True, use Visual Earth for the map background.
-    open_browser=True # If True, automatically open the visualization in a web browser.
-)
+    # Visualize the tracks on a map
+    aisdb.web_interface.visualize(
+        tracks,           # The tracks (trajectories) to visualize.
+        domain=domain,    # The spatial domain to use for the visualization.
+        visualearth=True, # If True, use Visual Earth for the map background.
+        open_browser=True # If True, automatically open the visualization in a web browser.
+    )
 ```
 {% endcode %}
 
 <figure><img src="../.gitbook/assets/Screenshot from 2024-09-04 11-09-25.png" alt=""><figcaption><p>Visualization of tracks queried from PostgreSQL database</p></figcaption></figure>
 
-Moreover, if you wish to use your own AIS data to create and process a database with AISdb, please check out our instructional guide on data processing and database creation: [_Using Your AIS Data_](using-your-ais-data.md)_._
-
-[^1]: 
+If you want to load your own AIS data instead of the bundled test files, see our guide on data processing and database creation, [_Using Your AIS Data_](using-your-ais-data.md)_._

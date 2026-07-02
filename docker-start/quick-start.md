@@ -1,4 +1,6 @@
 ---
+icon: docker
+description: Run AISdb from the published Docker image without setting up a local Rust and Python toolchain.
 hidden: true
 ---
 
@@ -6,190 +8,106 @@ hidden: true
 
 ### Python Docker Quick Start
 
-For most users, the recommended way to use the AISDB Python package is by installing it with pip. The main purpose of the Python docker images in this repository is to provide a build environment for the Python wheel files that can be used for pip installation, as well as providing a reference and testing environment. The `meridiancfi/aisdb:latest` image is based on `python:slim` with the AISDB package wheel installed. In the `meridiancfi/aisdb-manylinux:latest` image, wheel binary files are compiled from Rust and Python source code using a `manylinux` base docker image. The [Manylinux project](https://github.com/pypa/manylinux) aims to provide a convenient way to distribute binary Python extensions as wheels on Linux. To start the container, ensure that `docker` and `docker-compose` are installed, and enter into the command line:
+For most users, the recommended way to install AISdb is `pip install aisdb` (see the [Default Start](../default-start/quick-start.md)). Docker is useful when you'd rather not set up a local Rust and Python toolchain, or when you want a disposable environment for testing. The `meridiancfi/aisdb` image ships AISdb pre-installed on a `python:slim` base. To use it, make sure `docker` is installed, then run.
 
-```
+{% code title="terminal" %}
+```bash
 docker pull meridiancfi/aisdb
 docker run --interactive --tty --volume ./:/aisdb/ meridiancfi/aisdb
 ```
+{% endcode %}
 
-The current working directory will be mounted inside the container as a volume. The same can be achieved with `docker-compose` in the context of the repository compose file:
+The current working directory is mounted inside the container at `/aisdb`, so any script or notebook you drop there is visible from the container's Python interpreter. From inside the container, verify the install the same way you would locally.
 
-```
-docker-compose --file ./docker-compose.yml run --rm --volume "`pwd`:/aisdb" aisdb-python
-```
-
-### Compose Services
-
-In addition to the Python AISDB docker image, AISDB provides a complete suite of cloud services for storing, accessing, viewing, and networking AIS data. These services are defined in the `docker-compose.yml` file in the project repository. Cloud services are implemented in a microservices architecture, using a software-defined network defined in the compose file. Services include:
-
-* docserver
-  * NodeJS webserver to display Sphinx documentation (such as this webpage)
-* webserver
-  * NodeJS web application front-end interface for AISDB.
-* postgresdb
-  * AISDB Postgres database storage.
-* db-
-  * Web application back-end. Serves vectorized AIS tracks from the Postgres database in response to JSON-formatted queries.
-* receiver
-  * Listens for IP-enabled AIS transmitters over TLS/TCP or UDP channels, and stores incoming AIS messages in the postgres database. Optionally forwards filtered messages to a downstream UDP channel in raw or parsed format.
-* upstream-ais
-  * Live streaming AIS server. Listens for AIS messages forwarded by the `receiver` service, and reverse-proxy messages to downstream TCP clients or UDP channels. This service provides live-streaming data to the front end `webserver`.
-
-To start all AISDB cloud services, navigate to the repository root directory and enter into the command line (root permissions may be required):
-
-```
-docker-compose up --build nginx db-server webserver docserver receiver upstream-ais
+```bash
+python -c "import aisdb; print(aisdb.__version__)"
 ```
 
-### Development and Deployment
+If you're building AISdb from source rather than pulling the published image, the package is compiled from Rust and Python with [Maturin](https://www.maturin.rs/), as described in the [Default Start](../default-start/quick-start.md#development-installation). Building inside a [manylinux](https://github.com/pypa/manylinux) container is the standard way to produce a wheel that's portable across Linux distributions, using the same `maturin develop --release` step you'd run locally.
 
-The following services are used for the development and deployment of AISDB
+### AISdb's Service Components
 
-* build-wheels
-  * Build manylinux-compatible wheels for Python package distribution. The resulting wheel file is installed in aisdb-python.
-* python-test
-  * Run Python package integration tests. Based on the aisdb-python docker image..
-* nginx
-  *   NGINX gateway router. Routes incoming traffic to the appropriate cloud service. The following ports are exposed by the gateway:
+Beyond the Python package, AISdb includes a small set of Rust and JavaScript services for running a self-hosted deployment: an AIS `receiver`, a `database_server` that serves vectorized tracks over WebSocket, and a JavaScript/WebAssembly map front end in `aisdb_web`. These live in the [AISdb repository](https://github.com/AISViz/AISdb) alongside the Python package, each in its own top-level folder, and share a PostgreSQL database for storage.
 
-      * `80`: redirects to port 443
-      * `443`: serves web application endpoints over HTTPS
-      * `9920`: Proxy for the `upstream-ais` service stream output (raw format).
-      * `9922`: Proxy for the `receiver` service stream output (JSON format).
-
-      The following endpoints are available over HTTPS:
-
-      * `/`: Proxy for the `webserver` service.
-      * `/doc`: Proxy for the `docserver` service.
-      * `/ws`: Proxy for the `db-server` service.
-      * `/stream`: Alias of port `9922`.
-      * `/stream-raw`: Alias of port `9920`.
-      * `/coverage`: Alias of `/docs/coverage`.
-* certbot
-  * TLS/SSL certificate renewal service. Renews certificates used by the `nginx` service. `privkey.pem` and `fullchain.pem` certificates are mounted in the `nginx` container inside directory `/etc/letsencrypt/live/$FQDN/`, where `$FQDN` is the domain name, e.g. `127.0.0.1`.
+There's currently no published `docker-compose.yml` for orchestrating all of these at once. To run them, follow the [Detailed Start](detailed-start.md) guide, which walks through building and starting each service natively with `cargo` and `npm`. The subsections below cover the two things you'll most often want without standing up the full stack: querying a PostgreSQL database directly from Python, and querying vessel tracks from a running `database_server` (including the public MERIDIAN instance) over its WebSocket API.
 
 ### Environment
 
-Services running with docker compose will read environment variables from a `.env` file in the project root directory. An example `.env` file is included here:
+Each service reads its configuration from environment variables rather than a config file. The variables below cover the common cases. Set only the ones relevant to what you're running.
 
-```
-# Front end config (bundled with Vite for NodeJS)
+{% code title=".env" lineNumbers="true" %}
+```bash
+# Front end (aisdb_web, bundled with Vite)
 
-# AISDB database server and livestream server hostname
+# Hostname of the database server the front end connects to
 VITE_AISDBHOST='127.0.0.1'
 
-# Bing maps token
-# Get your token here: https://www.bingmapsportal.com/
-#VITE_BINGMAPSKEY='<my-token-here>'
-
-# Disable SSL/TLS for incoming livestream data.
-# When using this option, the front end will connect to the livestream
-# server at ws://$VITE_AISDBHOST:9922
-# Otherwise, the front end will connect to wss://$VITE_AISDBHOST/stream
-VITE_DISABLE_SSL_STREAM=1
-
-# Disable SSL for the database server connection
-VITE_DISABLE_SSL_DB=1
-
-# Port used for database server connection.
-# This setting is only active when VITE_DISABLE_SSL_DB is enabled,
-# otherwise, an SSL connection will be made to https://VITE_AISDBHOST/ws
+# Port used for the database server WebSocket connection
 VITE_AISDBPORT=9924
 
-# Allow users to query an unlimited amount of data at one time
-#VITE_NO_DB_LIMIT=1
+# Disable SSL/TLS for the database and livestream connections during local
+# development, where the front end talks to plain ws:// instead of wss://
+VITE_DISABLE_SSL_DB=1
+VITE_DISABLE_STREAM=1
 
-# if enabled, Bing Maps will be used for WMTS instead of OpenStreetMaps
+# Use Bing Maps tiles instead of OpenStreetMap, and set the tile server host
 VITE_BINGMAPTILES=1
+VITE_TILESERVER='dev.virtualearth.net'
 
-# Default WMTS server
-#VITE_TILESERVER="dev.virtualearth.net"
-VITE_TILESERVER="aisdb.meridian.cs.dal.ca"
+# database_server (Rust)
 
+# Postgres connection details read via a .pgpass file
+PGPASSFILE=$HOME/.pgpass
+PGUSER='postgres'
+PGHOST='127.0.0.1'
+PGPORT=5432
 
-# Back end config
-
-# Hostname
-AISDBHOST='127.0.0.1'
-#AISDBHOST='aisdb.meridian.cs.dal.ca'
-
-# Database server port
+# Port the database server listens on for incoming WebSocket queries
 AISDBPORT=9924
 
-# Python database path
-AISDBPATH='./AIS.sqlitedb'
-
-# Postgres database client config
-PGPASSFILE=$HOME/.pgpass
-PGUSER="postgres"
-PGHOST="[fc00::9]"
-PGPORT="5432"
-
-# Postgres database server config
-# More info here: https://hub.docker.com/_/postgres/
-POSTGRES_PASSWORD="example"
-
-# This volume will be mounted for the postgres data directory
-POSTGRES_VOLUME_DIR='./postgres_data'
-
-# NGINX CSP header endpoints
-NGINX_CSP_FRAME_ANCESTORS=""
-#NGINX_CSP_FRAME_ANCESTORS="https://aisdb.meridian.cs.dal.ca/"
-
-
-# Tests config
-
-# Mounted AISDB metadata directory.
-# Will be used during testing
-AISDBDATADIR='/RAID0/ais/'
-AISDBMARINETRAFFIC='/RAID0/ais/marinetraffic_V2.db'
+# receiver (Rust) and Python examples that talk to a live database server
+AISDBHOST='127.0.0.1'
 ```
+{% endcode %}
 
-### Interacting with Postgres Database
+### Interacting with a PostgreSQL Database
 
-In some cases, Postgres may preferred over SQLite. Postgres offers improved concurrency and scalability over SQLite, at the cost of requiring more disk space and compute resources. The easiest and recommended way to use AISDB with the Postgresql database is via docker (to manually install dependencies, see [Web Application Development](about:blank/webapp.html#webapp)). To get started, navigate to the repository root directory, and ensure docker and docker-compose are installed. Start the AIS receiver, database server, and postgres database docker images. Sudo permissions may be required for Docker and docker-compose.
+PostgreSQL is preferable to SQLite when you need better write concurrency or you're running a long-lived receiver that ingests data continuously. It costs more in disk space and setup than SQLite, which is why the Default Start guide uses SQLite for the introductory examples. The easiest way to get a PostgreSQL server running for local testing is the official image.
+
+```bash
+docker run --name aisdb-postgres --env POSTGRES_PASSWORD=example \
+  --publish 5432:5432 --detach postgres
+```
 
 #### Python API
 
-The receiver will fetch live data streaming from the MERIDIAN AIS network, and store it in the postgres database. Start the AIS receiver and Postgres database services from the command line with docker-compose:
+`aisdb.database.dbconn.PostgresDBConn` is a drop-in replacement for `aisdb.database.dbconn.SQLiteDBConn`, accepting the same [libpq keyword arguments](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS) as `psycopg`, or a connection string.
 
-```
-export POSTGRES_PASSWORD="example"
-docker-compose up --build receiver postgresdb
-```
-
-The Postgres database may be interfaced using Python in the same manner as the default SQLite database by using [`aisdb.database.dbconn.PostgresDBConn`](about:blank/api/aisdb.database.dbconn.html#aisdb.database.dbconn.PostgresDBConn) as a drop-in replacement for the default [`aisdb.database.dbconn.DBConn`](about:blank/api/aisdb.database.dbconn.html#aisdb.database.dbconn.DBConn) that uses SQLite.
-
-```
+```python
 import os
 from aisdb.database.dbconn import PostgresDBConn
 
 # keyword arguments
 dbconn = PostgresDBConn(
     hostaddr='127.0.0.1',
-    user='postgres',
     port=5432,
+    user='postgres',
+    dbname='postgres',
     password=os.environ.get('POSTGRES_PASSWORD'),
 )
 
-# Alternatively, connect using a connection string:
-dbconn = PostgresDBConn('Postgresql://localhost:5433')
+# alternatively, connect using a connection string
+dbconn = PostgresDBConn('postgresql://postgres:example@127.0.0.1:5432/postgres')
 ```
 
-The resulting dbconn may then be used similar to how `DBConn` is used in the [Intro Doc](about:blank/intro.html#intro)
+The resulting `dbconn` is used the same way as `SQLiteDBConn` in the [Default Start](../default-start/quick-start.md#querying-the-database) tutorial, passed to `aisdb.DBQuery(dbconn=dbconn, ...)`.
 
 #### Web API
 
-Start the AIS receiver, Postgres database, and database webserver services from the command line using the following command. See [Docker](/broken/pages/gbNtKhuyDcph0gpr3SKY) for more info on docker services. Alternatively, the services can be run in a local environment instead of a docker environment as described in [Web Application Development](about:blank/webapp.html#webapp).
+A running `database_server` also exposes AIS tracks over a WebSocket API, returning JSON-formatted vessel vectors in response to queries. This works against any `database_server` instance, including the public MERIDIAN one at `wss://aisviz.cs.dal.ca/ws`, so the example below runs without standing up any local services at all. If you're running your own `database_server` instead (see the [Detailed Start](detailed-start.md)), point `AISDBHOST` at its address. Since requests are utf8-encoded JSON, the same API can be reached from any language capable of speaking the [WebSocket protocol](https://www.rfc-editor.org/rfc/rfc6455), not just Python.
 
-```
-docker-compose up --build receiver postgresdb db-server
-```
-
-The receiver service will listen for new data from MERIDIAN’s AIS receiver, and store it in the postgres database. The db-server service provides a web API for the AIS data stored in the postgres database. This listens for WebSocket connections on port 9924, and returns JSON-formatted vessel tracks in response to queries. The following Python code provides an example of how to asynchronously query AIS data from db-server. This code can either run in a local Python environment or in the aisdb-python docker image. While this example uses Python, the web API can be accessed using any language or package using the [Websocket Protocol](https://www.rfc-editor.org/rfc/rfc6455), such as JavaScript, as long as requests are formatted as utf8-encoded JSON.
-
-```
+{% code title="websocket_client.py" lineNumbers="true" %}
+```python
 # Python standard library packages
 from datetime import datetime, timedelta
 import asyncio
@@ -201,18 +119,14 @@ import orjson
 import websockets.client
 
 # Query the MERIDIAN web API, or reconfigure the URL with an environment variable
-db_hostname = 'wss://aisdb.meridian.cs.dal.ca/ws'
+db_hostname = 'wss://aisviz.cs.dal.ca/ws'
 db_hostname = os.environ.get('AISDBHOST', db_hostname)
-
-# Default docker IPv6 address and port number.
-# See docker-compose.yml for configuration.
-# db_hostname = 'ws://[fc00::6]:9924'
 
 
 class DatabaseRequest():
-    ''' Methods in this class are used to generate JSON-formatted AIS requests,
-        as an interface to the AISDB WebSocket API.
-        The orjson library is used for fast utf8-encoded JSON serialization.
+    ''' Methods in this class generate JSON-formatted AIS requests, as an
+        interface to the AISdb WebSocket API. orjson is used for fast
+        utf8-encoded JSON serialization.
     '''
 
     def validrange() -> bytes:
@@ -222,7 +136,7 @@ class DatabaseRequest():
         return orjson.dumps({'msgtype': 'zones'})
 
     def track_vectors(x0: float, y0: float, x1: float, y1: float,
-                      start: datetime, end: datetime) -> dict:
+                       start: datetime, end: datetime) -> bytes:
         ''' database query for a given time range and bounding box '''
         return orjson.dumps(
             {
@@ -239,28 +153,25 @@ class DatabaseRequest():
             option=orjson.OPT_SERIALIZE_NUMPY)
 
 
-async def query_valid_daterange(db_socket: websockets.client, ) -> dict:
+async def query_valid_daterange(db_socket: websockets.client) -> dict:
     ''' Query the database server for minimum and maximum time range values.
-        Values are formatted as unix epoch seconds, i.e. the total number of
+        Values are formatted as unix epoch seconds, the total number of
         seconds since Jan 1 1970, 12am UTC.
     '''
 
-    # Create a new server daterange request using a dictionary
     query = DatabaseRequest.validrange()
     await db_socket.send(query)
 
-    # Wait for server response, and parse JSON from the response binary
     response = orjson.loads(await db_socket.recv())
     print(f'Received daterange response from server: {response}')
 
-    # Print the server response
     start = datetime.fromtimestamp(response['start'])
     end = datetime.fromtimestamp(response['end'])
 
     return {'start': start, 'end': end}
 
 
-async def query_tracks_24h(db_socket: websockets.client, ):
+async def query_tracks_24h(db_socket: websockets.client):
     ''' query recent ship movements near Dalhousie '''
 
     boundary = {'x0': -64.8131, 'x1': -62.2928, 'y0': 43.5686, 'y1': 45.3673}
@@ -278,7 +189,7 @@ async def query_tracks_24h(db_socket: websockets.client, ):
     print(response, end='\n\n\n')
 
 
-async def query_zones(db_socket: websockets.client, ):
+async def query_zones(db_socket: websockets.client):
     await db_socket.send(DatabaseRequest.zones())
 
     response = orjson.loads(await db_socket.recv())
@@ -292,7 +203,7 @@ async def main():
     ''' asynchronously query the web API for valid timerange, 24 hours of
         vectorized vessel data, and zone polygons
     '''
-    useragent = 'AISDB WebSocket Client'
+    useragent = 'AISdb WebSocket Client'
     useragent += f' ({os.name} {sys.implementation.cache_tag})'
 
     async with websockets.client.connect(
@@ -311,5 +222,22 @@ async def main():
 if __name__ == '__main__':
     asyncio.run(main())
 ```
+{% endcode %}
+
+Running the script against the MERIDIAN feed prints the daterange reply first, then one line per track vector as `query_tracks_24h` drains the socket:
+
+```
+Received daterange response from server: {'msgtype': 'validrange', 'start': 1690000000.0, 'end': 1751500000.0}
+start=2023-07-22T04:26:40  end=2025-07-02T21:26:40
+
+got track vector data:
+	{'msgtype': 'track_vector', 'meta': {'mmsi': '316001194'}, 't': [1751496000, 1751496060], 'x': [-63.5734, -63.5701], 'y': [44.6488, 44.6502]}
+```
+
+The exact vessels, MMSIs, and timestamps depend on whatever traffic MERIDIAN has ingested at query time, so a re-run will return a different set of tracks.
 
 ### Interacting with the Map
+
+The map front end lives in `aisdb_web`, a Vite application that renders vessel tracks over a tile basemap, with a Rust/WebAssembly module (built via `wasm-pack`) handling the heavier geometry work in the browser. It reads the same `VITE_*` variables listed above and is built with `aisdb_web/build_website.sh`, or served locally in development mode with `npm run dev` from that directory once the WebAssembly module is compiled.
+
+You don't need the front end running to see AIS data on a map. The Python package renders the same kind of visualization directly from a query, via `aisdb.web_interface.visualize()`, as shown in the [Default Start](../default-start/quick-start.md#visualization) tutorial. That's the quickest way to check that a query returns the tracks you expect before wiring up a full deployment.

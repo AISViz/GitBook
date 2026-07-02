@@ -1,16 +1,23 @@
+---
+icon: gauge-high
+description: >-
+  Calculate vessel speed over ground in knots between consecutive AIS
+  positions, and use it to flag implausible track jumps.
+---
+
 # 🚤 Vessel Speed
 
-In **AISdb**, the speed of a vessel is calculated using the `aisdb.gis.delta_knots` function, which <mark style="background-color:yellow;">computes the</mark> <mark style="background-color:yellow;"></mark>_<mark style="background-color:yellow;">speed over ground (SOG)</mark>_ <mark style="background-color:yellow;"></mark><mark style="background-color:yellow;">in knots</mark> between consecutive positions within a given track. This calculation is important for the [denoising encoder](https://aisdb.meridian.cs.dal.ca/doc/api/aisdb.denoising_encoder.html#aisdb.denoising_encoder.encode_greatcircledistance), as it compares the vessel's speed against a set threshold to aid in the data cleaning process.
+In **AISdb**, the speed of a vessel is calculated using the `aisdb.gis.delta_knots` function, which <mark style="background-color:yellow;">computes the speed over ground (SOG) in knots</mark> between consecutive positions within a given track. This calculation matters for the [denoising encoder](https://aisviz.cs.dal.ca/AISdb/api/aisdb.denoising_encoder.html#aisdb.denoising_encoder.encode_greatcircledistance), which compares a vessel's speed against a set threshold to flag implausible jumps in the data.
 
-Vessel speed calculation requires the **distance** the vessel has traveled between two consecutive positions and the **time interval**. This distance is computed using the [haversine distance](https://aisdb.meridian.cs.dal.ca/doc/api/aisdb.gis.html#aisdb.gis.delta_meters) function, and the time interval is simply the difference in timestamps between the two consecutive AIS position reports. The speed is then computed using the formula:
+Vessel speed calculation requires the **distance** the vessel has traveled between two consecutive positions and the **time interval** between them. The distance is computed using the [haversine distance](https://aisviz.cs.dal.ca/AISdb/api/aisdb.gis.html#aisdb.gis.delta_meters) function (`aisdb.gis.delta_meters`), and the time interval comes from [`aisdb.gis.delta_seconds`](https://aisviz.cs.dal.ca/AISdb/api/aisdb.gis.html#aisdb.gis.delta_seconds), which takes the difference between consecutive timestamps in a track's `time` array. The speed is then computed using the formula:
 
 $$
 Speed(knot) = \frac{Haversine Distance}{Time} \times 1.9438445
 $$
 
-The factor `1.9438445` converts the speed from meters per second to knots, the standard speed unit used in maritime contexts.
+The factor `1.9438445` converts speed from meters per second to knots, the standard speed unit used in maritime contexts. Internally, `delta_knots` clamps each elapsed-time value to a minimum of one second before dividing, so a duplicate or near-duplicate timestamp in a track can't produce a division by zero or an unrealistically inflated speed.
 
-With the example track we created in [_Haversine Distance_](haversine-distance.md), we can calculate the vessel speed between each two consecutive positions:
+With the example track we created in [_Haversine Distance_](haversine-distance.md), we can calculate the vessel speed between each pair of consecutive positions:
 
 {% code lineNumbers="true" %}
 ```python
@@ -55,3 +62,5 @@ for track in tracks_short:
 [3.7588560005768947 3.7519408684140214 3.8501088005116215 10.309565520121597]
 ```
 {% endcode %}
+
+The four values correspond to the four gaps between the five positions in the track. The first three positions are an hour apart and produce speeds around 3.8 knots, consistent with a vessel moving at a leisurely pace. The gap between the fourth and fifth positions spans three hours and covers a much greater distance, which is why the last value jumps to roughly 10.3 knots. This is exactly the kind of signal `aisdb.denoising_encoder.remove_pings_wrt_speed` relies on when filtering a track. A speed that spikes far above what a vessel of that type could plausibly sustain usually points to a corrupted or duplicated AIS position report rather than real movement.
