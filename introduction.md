@@ -31,7 +31,7 @@ layout:
 
 ## Overview
 
-Welcome to [AISdb](https://github.com/AISViz/AISdb), a comprehensive gateway for [Automatic Identification System (AIS)](https://en.wikipedia.org/wiki/Automatic_identification_system) data use and applications. AISdb is part of the [Making Vessels Tracking Data Available to Everyone (AISViz)](https://github.com/AISViz) project, developed and maintained by the [MAPS Lab](https://mapslab.tech/) at [Dalhousie University](https://www.dal.ca/) and building on earlier work from the [MERIDIAN](https://meridian.cs.dal.ca/) initiative. It is designed to streamline the collection, processing, and analysis of AIS data, both in live-streaming scenarios and through historical records.
+Welcome to [AISdb](https://github.com/AISViz/AISdb), a comprehensive gateway for [Automatic Identification System (AIS)](https://en.wikipedia.org/wiki/Automatic_identification_system) data use and applications. AISdb is part of the [Making Maritime Informatics Accessible to Everyone (AISViz)](https://github.com/AISViz) project, developed and maintained by the [MAPS Lab](https://mapslab.tech/) at [Dalhousie University](https://www.dal.ca/) and building on earlier work from the [MERIDIAN](https://meridian.cs.dal.ca/) initiative. It is designed to streamline the collection, processing, and analysis of AIS data, both in live-streaming scenarios and through historical records.
 
 <table data-view="cards">
   <thead><tr><th></th><th></th><th data-hidden data-card-target data-type="content-ref"></th></tr></thead>
