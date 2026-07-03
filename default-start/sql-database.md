@@ -236,7 +236,7 @@ connection.close()
 ```
 {% endcode %}
 
-For more examples, please see the SQL code in [`aisdb_sql/`](https://github.com/AISViz/AISdb/tree/master/aisdb/aisdb_sql) that is used to create database tables and associated queries.
+For more examples, please see the SQL code in [`aisdb_sql/`](https://github.com/MAPS-Lab/AISdb/tree/master/aisdb/aisdb_sql) that is used to create database tables and associated queries.
 
 ### Optional TimescaleDB Backend
 

@@ -225,4 +225,4 @@ Next, [Kalman Filters with FilterPy](kalman-filters-with-filterpy.md) models how
 ## References
 
 * scikit-learn clustering user guide: [https://scikit-learn.org/stable/modules/clustering.html](https://scikit-learn.org/stable/modules/clustering.html)
-* AISdb repository: [https://github.com/AISViz/AISdb](https://github.com/AISViz/AISdb)
+* AISdb repository: [https://github.com/MAPS-Lab/AISdb](https://github.com/MAPS-Lab/AISdb)

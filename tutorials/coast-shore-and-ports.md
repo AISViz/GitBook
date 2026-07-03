@@ -126,7 +126,7 @@ with PortDist(data_dir="./testdata/") as pdist:
 ## Fetching a list of ports
 
 {% hint style="warning" %}
-The `aisdb.ports` module landed after the 1.8.0-alpha release, so it is not in that tag or in the PyPI package. To use `WorldPortIndexClient`, install AISdb from the development branch with `pip install git+https://github.com/AISViz/AISdb.git`. The raster distance classes above work on 1.8.0-alpha as-is.
+The `aisdb.ports` module landed after the 1.8.0-alpha release, so it is not in that tag or in the PyPI package. To use `WorldPortIndexClient`, install AISdb from the development branch with `pip install git+https://github.com/MAPS-Lab/AISdb.git`. The raster distance classes above work on 1.8.0-alpha as-is.
 {% endhint %}
 
 `ShoreDist`, `CoastDist`, and `PortDist` all answer the same question from the vessel's side, how far is this point from a raster surface. Sometimes you need the opposite view, a list of the actual ports inside a region so you can label tracks, filter for cargo-capable harbors, or join port metadata onto your AIS data. AISdb exposes this through `aisdb.ports.api.WorldPortIndexClient`, which queries the World Port Index feature service maintained by the National Geospatial-Intelligence Agency and returns the result as a pandas DataFrame.

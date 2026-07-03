@@ -20,7 +20,7 @@ It also has three secondary components.
 > * AIS receiver client
 > * AIS livestream proxy dispatcher
 
-Every one of these services lives in its own top-level folder in the [AISdb repository](https://github.com/AISViz/AISdb). All of the Rust components share the same Cargo workspace and Rust toolchain, so installing Rust once with rustup covers the database server, the receiver, the proxy dispatcher, and the WebAssembly build for the front end.
+Every one of these services lives in its own top-level folder in the [AISdb repository](https://github.com/MAPS-Lab/AISdb). All of the Rust components share the same Cargo workspace and Rust toolchain, so installing Rust once with rustup covers the database server, the receiver, the proxy dispatcher, and the WebAssembly build for the front end.
 
 ### Dependencies
 
@@ -81,7 +81,7 @@ cargo install --path .
 aisdb-db-server
 ```
 
-On startup the server connects to PostgreSQL, creates its metadata tables if they don't already exist, and starts listening for client connections. Python code can query it directly with [`aisdb.database.dbconn.PostgresDBConn`](https://github.com/AISViz/AISdb/blob/master/aisdb/database/dbconn.py), or any WebSocket client can query it over the wire, as shown in the [Docker Quick Start](quick-start.md#web-api).
+On startup the server connects to PostgreSQL, creates its metadata tables if they don't already exist, and starts listening for client connections. Python code can query it directly with [`aisdb.database.dbconn.PostgresDBConn`](https://github.com/MAPS-Lab/AISdb/blob/master/aisdb/database/dbconn.py), or any WebSocket client can query it over the wire, as shown in the [Docker Quick Start](quick-start.md#web-api).
 
 {% endstep %}
 {% step %}

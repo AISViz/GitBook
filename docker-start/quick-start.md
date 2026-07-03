@@ -27,7 +27,7 @@ If you're building AISdb from source rather than pulling the published image, th
 
 ### AISdb's Service Components
 
-Beyond the Python package, AISdb includes a small set of Rust and JavaScript services for running a self-hosted deployment: an AIS `receiver`, a `database_server` that serves vectorized tracks over WebSocket, and a JavaScript/WebAssembly map front end in `aisdb_web`. These live in the [AISdb repository](https://github.com/AISViz/AISdb) alongside the Python package, each in its own top-level folder, and share a PostgreSQL database for storage.
+Beyond the Python package, AISdb includes a small set of Rust and JavaScript services for running a self-hosted deployment: an AIS `receiver`, a `database_server` that serves vectorized tracks over WebSocket, and a JavaScript/WebAssembly map front end in `aisdb_web`. These live in the [AISdb repository](https://github.com/MAPS-Lab/AISdb) alongside the Python package, each in its own top-level folder, and share a PostgreSQL database for storage.
 
 There's currently no published `docker-compose.yml` for orchestrating all of these at once. To run them, follow the [Detailed Start](detailed-start.md) guide, which walks through building and starting each service natively with `cargo` and `npm`. The subsections below cover the two things you'll most often want without standing up the full stack: querying a PostgreSQL database directly from Python, and querying vessel tracks from a running `database_server` (including the public MERIDIAN instance) over its WebSocket API.
 

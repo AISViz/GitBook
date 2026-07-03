@@ -25,7 +25,7 @@ pip install aisdb gradio pandas numpy rasterio plotly matplotlib cartopy h3 lang
 
 The app works on any CSV with the usual AIS columns. For a sample that matches the rest of this section, decode the NOAA day file [`AIS_2020_01_01.zip`](https://coast.noaa.gov/htdata/CMSP/AISDataHandler/2020/AIS_2020_01_01.zip) with `aisdb.decode_msgs` and export a CSV as shown in [AIS Data to CSV](../tutorials/ais-data-to-csv.md).
 
-The H3 step relies on the `aisdb.discretize` module, which landed after the 1.8.0-alpha release, so install AISdb from the development branch (`pip install git+https://github.com/AISViz/AISdb.git`) if you want that step to work. The two chat tabs need `langchain-google-genai` and `google-generativeai`; without them, those tabs report that the SDK is missing instead of failing the whole app.
+The H3 step relies on the `aisdb.discretize` module, which landed after the 1.8.0-alpha release, so install AISdb from the development branch (`pip install git+https://github.com/MAPS-Lab/AISdb.git`) if you want that step to work. The two chat tabs need `langchain-google-genai` and `google-generativeai`; without them, those tabs report that the SDK is missing instead of failing the whole app.
 
 ## 1. Download and launch the app
 
@@ -90,6 +90,6 @@ To turn what the app does into code you can version and scale, start back at [Cl
 ## References
 
 * Gradio: [https://www.gradio.app/](https://www.gradio.app/)
-* AISdb source and documentation: [https://github.com/AISViz/AISdb](https://github.com/AISViz/AISdb)
+* AISdb source and documentation: [https://github.com/MAPS-Lab/AISdb](https://github.com/MAPS-Lab/AISdb)
 * H3 hierarchical hexagonal geospatial indexing system: [https://h3geo.org/](https://h3geo.org/)
 * Google Generative AI Python SDK: [https://ai.google.dev/](https://ai.google.dev/)

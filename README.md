@@ -3,7 +3,7 @@
 Source for the AISdb user documentation and tutorials, published through GitBook at
 [aisviz.gitbook.io/documentation](https://aisviz.gitbook.io/documentation/). This repository holds
 the Markdown pages, navigation, and image assets behind the guides, and it is the companion
-documentation project to the [AISdb](https://github.com/AISViz/AISdb) library. Content tracks
+documentation project to the [AISdb](https://github.com/MAPS-Lab/AISdb) library. Content tracks
 release 1.8.0-alpha.
 
 AISdb is an open-source system for storing, processing, analysing, and visualising Automatic
@@ -29,7 +29,7 @@ runs the docs QA workflow in `.github/workflows/docs-qa.yml`, which executes
 `.github/scripts/docs_qa.py` and fails on broken internal links, missing assets, unbalanced code
 fences, editorial drift, and references to retired hosts or repositories. Please confirm that every
 AISdb call in an example matches the release noted at the top of this file. Questions and larger
-proposals can go through the [AISViz organisation](https://github.com/AISViz).
+proposals can go through the [MAPS Lab organisation](https://github.com/MAPS-Lab).
 
 ## Documentation
 
@@ -40,18 +40,18 @@ proposals can go through the [AISViz organisation](https://github.com/AISViz).
 
 ## Related projects
 
-- [AISdb](https://github.com/AISViz/AISdb) is the Python package for smart AIS data storage and
+- [AISdb](https://github.com/MAPS-Lab/AISdb) is the Python package for smart AIS data storage and
   integration.
-- [AISdb-lite](https://github.com/AISViz/AISdb-lite) is a lightweight version of AISdb with
+- [AISdb-lite](https://github.com/MAPS-Lab/AISdb-lite) is a lightweight version of AISdb with
   spatio-temporal capabilities on PostGIS and TigerData.
-- [NOAA-Integrator](https://github.com/AISViz/NOAA-Integrator) acquires and processes Marine
+- [NOAA-Integrator](https://github.com/MAPS-Lab/AISdb-NOAA-Integrator) acquires and processes Marine
   Cadastre AIS data into an AISdb-aligned database.
-- [Tutorials](https://github.com/AISViz/Tutorials) holds hands-on Jupyter notebooks that walk
+- [Tutorials](https://github.com/MAPS-Lab/AISdb-Tutorials) holds hands-on Jupyter notebooks that walk
   through AISdb, from database loading to bathymetry.
 
 ## License
 
 This documentation is released under the [AGPL-3.0 license](LICENSE). It is maintained by the
-AISViz team in the MAPS Lab at Dalhousie University, in collaboration with the Maritime Risk and
+MAPS Lab team in the MAPS Lab at Dalhousie University, in collaboration with the Maritime Risk and
 Safety (MARS) group, building on earlier work from the MERIDIAN initiative. Reach the maintainers
-at [aisviz@dal.ca](mailto:aisviz@dal.ca).
+at [mapslab@dal.ca](mailto:mapslab@dal.ca).

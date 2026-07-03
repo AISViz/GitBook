@@ -10,7 +10,7 @@ coverY: 0
 
 ### If you are new to AIS topics, [click here](../tutorials/automatic-identification-system.md) to learn about the Automatic Identification System (AIS).
 
-_If you are starting from scratch, download the example ".db" file from our_ [_AISdb Tutorial GitHub_](https://github.com/AISViz/Tutorials) _repository so you can follow this guide with real data._
+_If you are starting from scratch, download the example ".db" file from our_ [_AISdb Tutorial GitHub_](https://github.com/MAPS-Lab/AISdb-Tutorials) _repository so you can follow this guide with real data._
 
 ### Python Environment and Installation
 
@@ -43,7 +43,7 @@ pip install aisdb
 {% endtabs %}
 
 {% hint style="info" %}
-PyPI carries the latest stable line of AISdb. The 1.8.0-alpha release that this documentation targets is published on [GitHub](https://github.com/AISViz/AISdb/releases/tag/1.8.0-alpha) and installs from source. If you need the features introduced in 1.8.0-alpha, such as weather integration, NOAA CSV ingestion, and TimescaleDB support, follow the [Compile AISdb](compile-aisdb.md) guide or run `pip install git+https://github.com/AISViz/AISdb.git` with a Rust toolchain installed. The core workflow shown in this guide works the same on both.
+PyPI carries the latest stable line of AISdb. The 1.8.0-alpha release that this documentation targets is published on [GitHub](https://github.com/MAPS-Lab/AISdb/releases/tag/1.8.0-alpha) and installs from source. If you need the features introduced in 1.8.0-alpha, such as weather integration, NOAA CSV ingestion, and TimescaleDB support, follow the [Compile AISdb](compile-aisdb.md) guide or run `pip install git+https://github.com/MAPS-Lab/AISdb.git` with a Rust toolchain installed. The core workflow shown in this guide works the same on both.
 {% endhint %}
 
 You can test your installation by running the following commands:
@@ -69,7 +69,7 @@ To use _<mark style="background-color:red;">nightly builds</mark>_ <mark style="
 <pre class="language-bash" data-line-numbers><code class="lang-bash"><strong>source AISdb/bin/activate  # On Windows use `AISdb\Scripts\activate`
 </strong>
 <strong># Cloning the Repository and installing the package
-</strong>git clone https://github.com/AISViz/AISdb.git &#x26;&#x26; cd AISdb
+</strong>git clone https://github.com/MAPS-Lab/AISdb.git &#x26;&#x26; cd AISdb
 <strong>
 </strong># Windows users can instead download the installer:
 <strong>#   - https://forge.rust-lang.org/infra/other-installation-methods.html#rustup
@@ -89,7 +89,7 @@ Alternatively, you can use _<mark style="background-color:red;">nightly builds</
 {% code title="colab_setup.py" %}
 <pre class="language-python" data-line-numbers><code class="lang-python"><strong>import os
 </strong># Clone the AISdb repository from GitHub
-<strong>!git clone https://github.com/AISViz/AISdb.git
+<strong>!git clone https://github.com/MAPS-Lab/AISdb.git
 </strong># Install Rust using the official Rustup script
 <strong>!curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 </strong># Install Maturin to build the packages
@@ -168,7 +168,7 @@ This uses `psycopg`, which installs automatically with `pip install aisdb`, so t
 
 #### Attaching a SQLite database to AISdb
 
-Querying SQLite is as easy as providing the name of a <mark style="background-color:red;">".db" file</mark> with the same entity-relationship model as the databases supported by AISdb, which are detailed in the [SQL Database](sql-database.md) section. We prepared an example SQLite database `example_data.db` based on AIS data from a small region near Maine, United States, in January 2022 from [Marine Cadastre](https://hub.marinecadastre.gov/pages/vesseltraffic), which is available in the AISdb [Tutorial](https://github.com/AISViz/Tutorials) GitHub repository.
+Querying SQLite is as easy as providing the name of a <mark style="background-color:red;">".db" file</mark> with the same entity-relationship model as the databases supported by AISdb, which are detailed in the [SQL Database](sql-database.md) section. We prepared an example SQLite database `example_data.db` based on AIS data from a small region near Maine, United States, in January 2022 from [Marine Cadastre](https://hub.marinecadastre.gov/pages/vesseltraffic), which is available in the AISdb [Tutorial](https://github.com/MAPS-Lab/AISdb-Tutorials) GitHub repository.
 
 <pre class="language-python" data-line-numbers><code class="lang-python"><strong>from aisdb.database.dbconn import SQLiteDBConn 
 </strong>

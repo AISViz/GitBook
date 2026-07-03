@@ -277,7 +277,7 @@ That covers the full pipeline for your own AIS files, loading raw messages into 
 
 ## Pipeline for Bulk File Downloads and Database Integration
 
-This section provides an example of downloading and processing multiple files and loading the data into an AISdb-aligned database. The pipeline is packaged as the `noaa-integrator` command-line tool, available in this [GitHub repository](https://github.com/AISViz/NOAA-Integrator). Each stage is a subcommand; run the stages you need, in order.
+This section provides an example of downloading and processing multiple files and loading the data into an AISdb-aligned database. The pipeline is packaged as the `noaa-integrator` command-line tool, available in this [GitHub repository](https://github.com/MAPS-Lab/AISdb-NOAA-Integrator). Each stage is a subcommand; run the stages you need, in order.
 
 {% stepper %}
 {% step %}
@@ -287,7 +287,7 @@ Clone the repository and sync its environment with [uv](https://docs.astral.sh/u
 
 {% code title="install.sh" lineNumbers="true" %}
 ```bash
-git clone https://github.com/AISViz/NOAA-Integrator
+git clone https://github.com/MAPS-Lab/AISdb-NOAA-Integrator
 cd NOAA-Integrator
 uv sync --extra load
 ```

@@ -236,4 +236,4 @@ Next, [seq2seq in PyTorch](seq2seq-in-pytorch.md) learns to predict where a deno
 
 * FilterPy documentation: [https://filterpy.readthedocs.io/](https://filterpy.readthedocs.io/)
 * Roger Labbe, "Kalman and Bayesian Filters in Python": [https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python](https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python)
-* AISdb repository: [https://github.com/AISViz/AISdb](https://github.com/AISViz/AISdb)
+* AISdb repository: [https://github.com/MAPS-Lab/AISdb](https://github.com/MAPS-Lab/AISdb)

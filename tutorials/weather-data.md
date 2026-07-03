@@ -10,7 +10,7 @@ description: >-
 
 This tutorial covers merging ERA5 weather variables with AIS vessel tracks using AISdb's `WeatherDataStore`. It reads GRIB files, either ones you already have on disk or ones fetched on demand from the Copernicus Climate Data Store (CDS), and matches wind, precipitation, and other reanalysis fields to each point in a track.
 
-To work with the runnable notebook directly, see [weather.ipynb](https://github.com/AISViz/AISdb/blob/master/examples/weather.ipynb) in the AISdb repository.
+To work with the runnable notebook directly, see [weather.ipynb](https://github.com/MAPS-Lab/AISdb/blob/master/examples/weather.ipynb) in the AISdb repository.
 
 ## Prerequisites
 

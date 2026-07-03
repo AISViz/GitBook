@@ -40,7 +40,7 @@ pip install --upgrade "maturin[patchelf]"
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 # Clone the source code and move into the package root
-git clone https://github.com/AISViz/AISdb.git && cd aisdb
+git clone https://github.com/MAPS-Lab/AISdb.git && cd aisdb
 
 # Build and install AISdb into your virtual environment
 maturin develop --release --extras=test,docs
@@ -73,7 +73,7 @@ pip install --upgrade maturin
 curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
 # Clone the source code and move into the package root
-git clone https://github.com/AISViz/AISdb.git && cd aisdb
+git clone https://github.com/MAPS-Lab/AISdb.git && cd aisdb
 
 # Build and install AISdb into your virtual environment
 maturin develop --release --extras=test,docs
@@ -99,7 +99,7 @@ python -m venv AISdb
 pip install --upgrade maturin
 
 # Clone the source code and move into the package root
-git clone https://github.com/AISViz/AISdb.git
+git clone https://github.com/MAPS-Lab/AISdb.git
 cd aisdb
 
 # Build and install AISdb into your virtual environment

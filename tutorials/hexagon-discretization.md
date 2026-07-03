@@ -20,7 +20,7 @@ As illustrated in the figure above, this uniformity removes the diagonal-versus-
 ### Discretize AIS lat/lon points to hexagons using AISdb
 
 {% hint style="warning" %}
-The `aisdb.discretize.h3` module landed after the 1.8.0-alpha release, so it is not in that tag or in the PyPI package. To follow this tutorial, install AISdb from the development branch with `pip install git+https://github.com/AISViz/AISdb.git` (a Rust toolchain is required to build it).
+The `aisdb.discretize.h3` module landed after the 1.8.0-alpha release, so it is not in that tag or in the PyPI package. To follow this tutorial, install AISdb from the development branch with `pip install git+https://github.com/MAPS-Lab/AISdb.git` (a Rust toolchain is required to build it).
 {% endhint %}
 
 AISdb's `aisdb.discretize.h3.Discretizer` class wraps the [h3-py](https://uber.github.io/h3-py/) bindings so you can go from a stream of AIS tracks straight to H3 cell IDs, without hand-rolling the lat/lon-to-cell conversion yourself. The code below connects to a PostgreSQL database, queries a bounding box and time window in the Gulf of St. Lawrence, and tags each point in the resulting tracks with its H3 index.
@@ -93,7 +93,7 @@ discretizer.describe()
 
 `describe()` relies on `matplotlib` and `geopandas`, both of which install automatically as core AISdb dependencies, so there's nothing extra to add.
 
-Refer to the example notebook for the full walkthrough, including the `describe()` output. [https://github.com/AISViz/AISdb/blob/master/examples/discretize.ipynb](https://github.com/AISViz/AISdb/blob/master/examples/discretize.ipynb)
+Refer to the example notebook for the full walkthrough, including the `describe()` output. [https://github.com/MAPS-Lab/AISdb/blob/master/examples/discretize.ipynb](https://github.com/MAPS-Lab/AISdb/blob/master/examples/discretize.ipynb)
 
 ## References
 
