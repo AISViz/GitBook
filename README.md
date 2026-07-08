@@ -26,7 +26,8 @@ Edit the relevant Markdown file, keep the GitBook front matter and the hint or f
 
 - [Documentation](https://aisviz.gitbook.io/documentation/)
 - [Tutorials](https://aisviz.gitbook.io/tutorials/)
-- [API reference](https://aisviz.cs.dal.ca/AISdb/)
+- [API reference](https://maps-lab.github.io/AISdb/)
+- [AISdb-lite API](https://maps-lab.github.io/AISdb-lite/)
 - [Website](https://aisviz.cs.dal.ca/)
 
 ## Related projects
